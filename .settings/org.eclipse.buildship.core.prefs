@@ -1,0 +1,13 @@
+arguments=
+auto.sync=false
+build.scans.enabled=false
+connection.gradle.distribution=GRADLE_DISTRIBUTION(LOCAL_INSTALLATION(D\:\\Program Files\\gradle-6.3))
+connection.project.dir=
+eclipse.preferences.version=1
+gradle.user.home=D\:/Program Files/gradle-6.3
+java.home=C\:/Program Files/Java/openjdk-1.8.0.242.redhat
+jvm.arguments=
+offline.mode=false
+override.workspace.settings=true
+show.console.view=false
+show.executions.view=false
