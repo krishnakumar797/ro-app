@@ -1,137 +1,277 @@
 package com.rico.platform
 
-import com.google.common.collect.Lists
 import java.util.Map.Entry
+
+import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.Exec
-import org.gradle.internal.logging.text.StyledTextOutput
-import org.gradle.internal.logging.text.StyledTextOutput.Style
-import org.gradle.internal.logging.text.StyledTextOutputFactory
+
+import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.async.ResultCallback
+import com.github.dockerjava.api.command.CreateContainerCmd
+import com.github.dockerjava.api.command.CreateContainerResponse
+import com.github.dockerjava.api.command.InspectExecResponse
+import com.github.dockerjava.api.command.PullImageResultCallback
+import com.github.dockerjava.api.command.RemoveContainerCmd
+import com.github.dockerjava.api.command.StartContainerCmd
+import com.github.dockerjava.api.command.StopContainerCmd
+import com.github.dockerjava.api.model.ExposedPort
+import com.github.dockerjava.api.model.HostConfig
+import com.github.dockerjava.api.model.Mount
+import com.github.dockerjava.api.model.MountType
+import com.github.dockerjava.api.model.Network
+import com.github.dockerjava.api.model.Ports
+import com.github.dockerjava.api.model.PullResponseItem
+import com.github.dockerjava.api.model.RestartPolicy
+import com.github.dockerjava.api.model.ServiceModeConfig
+import com.github.dockerjava.api.model.ServiceSpec
+import com.github.dockerjava.api.model.UpdateConfig
+import com.github.dockerjava.api.model.UpdateOrder
+import com.github.dockerjava.core.DefaultDockerClientConfig
+import com.github.dockerjava.core.DockerClientConfig
+import com.github.dockerjava.core.DockerClientImpl
+import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
+import com.github.dockerjava.transport.DockerHttpClient
+import com.rico.platform.utils.RoUtils
 
 /**
  * Docker run plugin
- * 
- * @author krishna
  *
  */
 class DockerRunPlugin implements Plugin<Project> {
-	
-    @Override
-    void apply(Project project) {
-        DockerRunExtension ext = project.extensions.create('dockerRun', DockerRunExtension)
 
-        Exec dockerRunStatus = project.tasks.create('dockerRunStatus', Exec, {
-            group = 'Docker Run'
-            description = 'Checks the run status of the container'
-        })
+	private DockerClient dockerClient
+	private String dockerRegistry
 
-        Exec dockerRun = project.tasks.create('dockerRun', Exec, {
-            group = 'Docker Run'
-            description = 'Runs the specified container with port mappings'
-        })
+	public DockerRunPlugin() {
+		//Getting system environment variables and configuring the docker client
+		println "Initializing docker config"
+		dockerRegistry = RoUtils.dockerRegistry
+        
+		DockerClientConfig config = null
 
-        Exec dockerStop = project.tasks.create('dockerStop', Exec, {
-            group = 'Docker Run'
-            description = 'Stops the named container if it is running'
-            ignoreExitValue = true
-        })
+		if(!RoUtils.dockerUser.contentEquals("0") && !RoUtils.dockerPassword.contentEquals("0")) {
+			config = DefaultDockerClientConfig.createDefaultConfigBuilder()
+					.withDockerHost(RoUtils.dockerHost)
+					.withDockerTlsVerify(false)
+					.withRegistryUsername(RoUtils.dockerUser)
+					.withRegistryPassword(RoUtils.dockerPassword)
+					.withRegistryUrl(dockerRegistry)
+					.build();
+		}else {
+			config = DefaultDockerClientConfig.createDefaultConfigBuilder()
+					.withDockerHost(RoUtils.dockerHost)
+					.withDockerTlsVerify(false)
+					.withRegistryUrl(dockerRegistry)
+					.build();
+		}
 
-        Exec dockerRemoveContainer = project.tasks.create('dockerRemoveContainer', Exec, {
-            group = 'Docker Run'
-            description = 'Removes the persistent container associated with the Docker Run tasks'
-            ignoreExitValue = true
-        })
+		DockerHttpClient httpClient = new ApacheDockerHttpClient.Builder()
+				.dockerHost(config.getDockerHost())
+				.build();
 
-        Exec dockerNetworkModeStatus = project.tasks.create('dockerNetworkModeStatus', Exec, {
-            group = 'Docker Run'
-            description = 'Checks the network configuration of the container'
-        })
+		dockerClient = DockerClientImpl.getInstance(config, httpClient);
+		dockerClient.pingCmd().exec().inspect()
+	}
 
-        project.afterEvaluate {
-            dockerRunStatus.with {
-                standardOutput = new ByteArrayOutputStream()
-                commandLine 'docker', 'inspect', '--format={{.State.Running}}', ext.name
-                doLast {
-                    if (standardOutput.toString().trim() != 'true') {
-                        println "Docker container '${ext.name}' is STOPPED."
-                        return 1
-                    } else {
-                        println "Docker container '${ext.name}' is RUNNING."
-                    }
-                }
-            }
+	@Override
+	void apply(Project project) {
+		DockerRunExtension ext = project.extensions.create('dockerRun', DockerRunExtension)
 
-            dockerNetworkModeStatus.with {
-                standardOutput = new ByteArrayOutputStream()
-                commandLine 'docker', 'inspect', '--format={{.HostConfig.NetworkMode}}', ext.name
-                doLast {
-                    def networkMode = standardOutput.toString().trim()
-                    if (networkMode == 'default') {
-                        println "Docker container '${ext.name}' has default network configuration (bridge)."
-                    }
-                    else {
-                        if (networkMode == ext.network) {
-                            println "Docker container '${ext.name}' is configured to run with '${ext.network}' network mode."
-                        }
-                        else {
-                            println "Docker container '${ext.name}' runs with '${networkMode}' network mode instead of the configured '${ext.network}'."
-                            return 1
-                        }
-                    }
-                }
-            }
+		DefaultTask dockerRunStatus = project.tasks.create('dockerRunStatus', DefaultTask, {
+			group = 'Docker Run'
+			description = 'Checks the run status of the container'
+		})
 
-            dockerRun.with {
-                List<String> args = Lists.newArrayList()
-                args.addAll(['docker', 'run'])
-                if (ext.daemonize) {
-                  args.add('-d')
-                }
-                if (ext.clean) {
-                  args.add('--rm')
-                } else {
-                  finalizedBy dockerRunStatus
-                }
-                if (ext.network) {
-                    args.addAll(['--network', ext.network])
-                }
-                for (String port : ext.ports) {
-                    args.add('-p')
-                    args.add(port)
-                }
-                for (Entry<Object,String> volume : ext.volumes.entrySet()) {
-                    File localFile = project.file(volume.key)
+		DefaultTask dockerRun = project.tasks.create('dockerRun', DefaultTask, {
+			group = 'Docker Run'
+			description = 'Runs the specified container with port mappings'
+		})
 
-                    if (!localFile.exists()) {
-                       StyledTextOutput o = project.services.get(StyledTextOutputFactory.class).create(DockerRunPlugin)
-                       o.withStyle(Style.Error).println("ERROR: Local folder ${localFile} doesn't exist. Mounted volume will not be visible to container")
-                       throw new IllegalStateException("Local folder ${localFile} doesn't exist.")
-                    }
+		DefaultTask dockerStop = project.tasks.create('dockerStop', DefaultTask, {
+			group = 'Docker Run'
+			description = 'Stops the named container if it is running'
+		})
 
-                    args.add('-v')
-                    args.add("${localFile.absolutePath}:${volume.value}")
-                }
-                args.addAll(ext.env.collect{ k, v -> ['-e', "${k}=${v}"] }.flatten())
-                args.add('--name')
-                args.add(ext.name)
-                if (!ext.arguments.isEmpty()) {
-                    args.addAll(ext.arguments)
-                }
-                args.add(ext.image)
-                if (!ext.command.isEmpty()) {
-                    args.addAll(ext.command)
-                }
-                commandLine args
-            }
+		DefaultTask dockerRemoveContainer = project.tasks.create('dockerRemoveContainer', DefaultTask, {
+			group = 'Docker Run'
+			description = 'Removes the persistent container associated with the Docker Run tasks'
+		})
 
-            dockerStop.with {
-                commandLine 'docker', 'stop', ext.name
-            }
+		DefaultTask dockerNetworkModeStatus = project.tasks.create('dockerNetworkModeStatus', DefaultTask, {
+			group = 'Docker Run'
+			description = 'Checks the network configuration of the container'
+		})
 
-            dockerRemoveContainer.with {
-                commandLine 'docker', 'rm', ext.name
-            }
-        }
-    }
+		project.afterEvaluate {
+			dockerRunStatus.configure {
+				doLast {
+					this.execInspect(ext.name, dockerClient)
+				}
+			}
+
+			dockerNetworkModeStatus.configure {
+				doLast {
+					this.execNetworkInspect(ext.network, dockerClient)
+				}
+			}
+
+			dockerRun.configure {
+				doLast {
+					Map<String,String> args = new HashMap<>()
+					//Adding clean
+					if (ext.clean) {
+						args.put("clean", "y")
+					}
+					//Adding network name
+					if (ext.network) {
+						args.put('network', ext.network)
+					}
+					//Adding ports
+					ExposedPort[] exposedPortArray = new ExposedPort[ext.ports.size()]
+					Ports portBindings = new Ports();
+					for (int i=0;i<ext.ports.size();i++) {
+						String[] portMapping = ext.ports[i].split(':');
+						exposedPortArray[i] = ExposedPort.tcp(portMapping[1].toInteger());
+						portBindings.bind(exposedPortArray[i], Ports.Binding.bindPort(portMapping[0].toInteger()));
+					}
+					//Adding volumes
+					List<Mount> mountList = new ArrayList<>()
+					for (Entry<String,String> volume : ext.volumes.entrySet()) {
+						Mount mount = new Mount();
+						mount.withType(MountType.VOLUME)
+						mount.withSource(volume.getKey()).withTarget(volume.getValue())
+						mountList.add(mount)
+					}
+					//Adding environments
+					final List<String> envs = new ArrayList<>(ext.env.size());
+					for (Entry<String,String> env : ext.env.entrySet()) {
+						envs.add(env.getKey() + '=' + env.getValue());
+					}
+
+					//					if (!ext.arguments.isEmpty()) {
+					//						args.addAll(ext.arguments)
+					//					}
+
+					println "Image Name - "+ext.image
+					//Creating and starting docker container
+					this.execCreateAndRun(this.dockerRegistry+"/"+ext.image, ext.tag, ext.name, args, exposedPortArray, portBindings, mountList, envs, ext.command, dockerClient)
+				}
+			}
+
+			dockerStop.configure {
+				doLast {
+
+					this.execStop(ext.name, dockerClient)
+				}
+			}
+
+			dockerRemoveContainer.configure {
+				doLast{
+
+					this.execRemove(ext.name, dockerClient)
+				}
+			}
+		}
+	}
+
+
+	/**
+	 * Method to inspect the docker
+	 *
+	 * @param containerName
+	 * @param dockerClient
+	 * @return
+	 */
+	private void execInspect(String containerName, DockerClient dockerClient) {
+		InspectExecResponse inspectExecResponse = dockerClient.inspectExecCmd(containerName).exec();
+		println inspectExecResponse.inspect();
+	}
+
+	/**
+	 * Method to inspect the network
+	 * 
+	 * @param networkId
+	 * @param dockerClient
+	 * @return
+	 */
+	private void execNetworkInspect(String networkId, DockerClient dockerClient) {
+		Network network = dockerClient.inspectNetworkCmd().withNetworkId(networkId).exec();
+		println network.inspect();
+	}
+
+	/**
+	 * Method to create and run the docker
+	 *  
+	 * @param imageRepository
+	 * @param registry
+	 * @param tag
+	 * @param name
+	 * @param dockerClient
+	 * @param commands
+	 */
+	private void execCreateAndRun(String imageRepository, String tag, String name, Map<String,String> args, ExposedPort[] exposedPortArray, Ports portBindings,
+			List<Mount> mountList, List<String> envs, List<String> commandList, DockerClient dockerClient) {
+		ByteArrayOutputStream bos = new ByteArrayOutputStream()
+		ResultCallback.Adapter<PullResponseItem> resultCallback = new PullImageResultCallback() {
+					@Override
+					public void onNext(PullResponseItem item) {
+						if (item.getStatus() != null && item.getProgressDetail() != null) {
+							println item.getId() + ":" + item.getStatus()
+						}
+						super.onNext(item);
+					}
+				};
+		dockerClient.pullImageCmd(imageRepository).withTag(tag).exec(resultCallback)
+		resultCallback.awaitCompletion()
+		//Creating container
+		CreateContainerCmd containerCmd = dockerClient.createContainerCmd(imageRepository+":"+tag).withName(name)
+
+		HostConfig hc = new HostConfig();
+		hc.withNetworkMode(args.get("network"))
+		
+		if(exposedPortArray.length >0) {
+			containerCmd = containerCmd.withExposedPorts(exposedPortArray)
+		}
+		if(portBindings.getBindings().size() > 0) {
+			hc = hc.withPortBindings(portBindings)
+		}
+		if(!mountList.isEmpty()) {
+			hc=	hc.withMounts(mountList)
+		}
+		if(!envs.isEmpty()) {
+			containerCmd = containerCmd.withEnv(envs)
+		}
+		if(!commandList.isEmpty()) {
+			containerCmd = containerCmd.withCmd(commandList)
+		}
+		//Setting restart policy
+		hc = hc.withRestartPolicy(RestartPolicy.alwaysRestart())
+		println "Starting the container "+name
+		CreateContainerResponse container = containerCmd.withHostConfig(hc).withAttachStdout(true).withAttachStdin(true).withAttachStderr(true).withTty(false).exec();
+		StartContainerCmd startContainerCmd = dockerClient.startContainerCmd(container.getId()).exec();
+	}
+
+	/**
+	 * Method to remove a container
+	 * 
+	 * @param containerName
+	 * @param dockerClient
+	 * @return
+	 */
+	private void execRemove(String containerName, DockerClient dockerClient) {
+		RemoveContainerCmd removeContainerCmd = dockerClient.removeContainerCmd(containerName).exec();
+	}
+
+
+	/**
+	 * Method to stop a container
+	 *
+	 * @param containerName
+	 * @param dockerClient
+	 * @return
+	 */
+	private void execStop(String containerName, DockerClient dockerClient) {
+		StopContainerCmd stopContainerCmd = dockerClient.stopContainerCmd(containerName).exec();
+	}
 }

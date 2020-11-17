@@ -9,122 +9,156 @@ import com.google.common.collect.ImmutableSet
 
 /**
  * Docker run extensions
- * 
- * @author krishna
  *
  */
 class DockerRunExtension {
 
-    private String name
-    private String image
-    private String network
-    private List<String> command = ImmutableList.of()
-    private Set<String> ports = ImmutableSet.of()
-    private Map<String,String> env = ImmutableMap.of()
-    private List<String> arguments = ImmutableList.of()
-    private Map<Object,String> volumes = ImmutableMap.of()
-    private boolean daemonize = true
-    private boolean clean = false
+	private String name
+	private String serviceName
+	private String image
+	private String tag
+	private String network
+	private String swarmMode
+	private Integer replicas
+	private boolean rollbackOnUpdateFailure
+	private Set<String> ports = ImmutableSet.of()
+	private Map<String,String> env = ImmutableMap.of()
+	private List<String> arguments = ImmutableList.of()
+	private List<String> command = ImmutableList.of()
+	private Map<String,String> volumes = ImmutableMap.of()
+	private boolean clean = false
 
-    public String getName() {
-        return name
-    }
+	public String getName() {
+		return name
+	}
 
-    public void setName(String name) {
-        this.name = name
-    }
+	public void setName(String name) {
+		this.name = name
+	}
 
-    public boolean getDaemonize() {
-        return daemonize
-    }
 
-    public void setDaemonize(boolean daemonize) {
-        this.daemonize = daemonize
-    }
+	public String getServiceName() {
+		return serviceName;
+	}
 
-    public boolean getClean() {
-        return clean
-    }
+	public void setServiceName(String serviceName) {
+		this.serviceName = serviceName;
+	}
 
-    public void setClean(boolean clean) {
-        this.clean = clean
-    }
+	public String getSwarmMode() {
+		return swarmMode;
+	}
 
-    public String getImage() {
-        return image
-    }
+	public void setSwarmMode(String swarmMode) {
+		this.swarmMode = swarmMode;
+	}
 
-    public void setImage(String image) {
-        this.image = image
-    }
+	public Integer getReplicas() {
+		return replicas;
+	}
 
-    public Set<String> getPorts() {
-        return ports
-    }
+	public void setReplicas(Integer replicas) {
+		this.replicas = replicas;
+	}
 
-    public List<String> getCommand() {
-        return command
-    }
+	public boolean isRollbackOnUpdateFailure() {
+		return rollbackOnUpdateFailure;
+	}
 
-    public Map<Object,String> getVolumes() {
-        return volumes
-    }
+	public void setRollbackOnUpdateFailure(boolean rollbackOnUpdateFailure) {
+		this.rollbackOnUpdateFailure = rollbackOnUpdateFailure;
+	}
 
-    public void command(String... command) {
-        this.command = ImmutableList.copyOf(command)
-    }
+	public boolean getClean() {
+		return clean
+	}
 
-    public void setNetwork(String network) {
-        this.network = network
-    }
+	public void setClean(boolean clean) {
+		this.clean = clean
+	}
 
-    public String getNetwork() {
-        return network
-    }
+	public String getImage() {
+		return image
+	}
 
-    private void setEnvSingle(String key, String value) {
-        this.env.put(checkNotNull(key, "key"), checkNotNull(value, "value"))
-    }
+	public void setImage(String image) {
+		this.image = image
+	}
 
-    public void env(Map<String,String> env) {
-        this.env = ImmutableMap.copyOf(env)
-    }
+	public String getTag() {
+		return tag;
+	}
 
-    public Map<String, String> getEnv() {
-        return env
-    }
+	public void setTag(String tag) {
+		this.tag = tag;
+	}
 
-    public void arguments(String... arguments) {
-        this.arguments = ImmutableList.copyOf(arguments)
-    }
+	public Set<String> getPorts() {
+		return ports
+	}
 
-    public List<String> getArguments() {
-        return arguments
-    }
+	public List<String> getCommand() {
+		return command
+	}
 
-    public void ports(String... ports) {
-        ImmutableSet.Builder builder = ImmutableSet.builder()
-        for (String port : ports) {
-            String[] mapping = port.split(':', 2)
-            if (mapping.length == 1) {
-                checkPortIsValid(mapping[0])
-                builder.add("${mapping[0]}:${mapping[0]}")
-            } else {
-                checkPortIsValid(mapping[0])
-                checkPortIsValid(mapping[1])
-                builder.add("${mapping[0]}:${mapping[1]}")
-            }
-        }
-        this.ports = builder.build()
-    }
+	public Map<Object,String> getVolumes() {
+		return volumes
+	}
 
-    public void volumes(Map<Object,String> volumes) {
-      this.volumes = ImmutableMap.copyOf(volumes)
-    }
+	public void command(List<String> command) {
+		this.command = ImmutableList.copyOf(command)
+	}
 
-    private static void checkPortIsValid(String port) {
-        int val = Integer.parseInt(port)
-        Preconditions.checkArgument(0 < val && val <= 65536, "Port must be in the range [1,65536]")
-    }
+	public void setNetwork(String network) {
+		this.network = network
+	}
 
+	public String getNetwork() {
+		return network
+	}
+
+	private void setEnvSingle(String key, String value) {
+		this.env.put(checkNotNull(key, "key"), checkNotNull(value, "value"))
+	}
+
+	public void env(Map<String,String> env) {
+		this.env = ImmutableMap.copyOf(env)
+	}
+
+	public Map<String, String> getEnv() {
+		return env
+	}
+
+	public void arguments(String... arguments) {
+		this.arguments = ImmutableList.copyOf(arguments)
+	}
+
+	public List<String> getArguments() {
+		return arguments
+	}
+
+	public void ports(String[] ports) {
+		ImmutableSet.Builder builder = ImmutableSet.builder()
+		for (String port : ports) {
+			String[] mapping = port.split(':', 2)
+			if (mapping.length == 1) {
+				checkPortIsValid(mapping[0])
+				builder.add("${mapping[0]}:${mapping[0]}")
+			} else {
+				checkPortIsValid(mapping[0])
+				checkPortIsValid(mapping[1])
+				builder.add("${mapping[0]}:${mapping[1]}")
+			}
+		}
+		this.ports = builder.build()
+	}
+
+	public void volumes(Map<Object,String> volumes) {
+		this.volumes = ImmutableMap.copyOf(volumes)
+	}
+
+	private static void checkPortIsValid(String port) {
+		int val = Integer.parseInt(port)
+		Preconditions.checkArgument(0 < val && val <= 65536, "Port must be in the range [1,65536]")
+	}
 }

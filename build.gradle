@@ -10,16 +10,19 @@ plugins {
 }
 
 group = 'com.rico'
-version = '1.0'
+version = '2.1'
 
+//Publishing to jforg repository
 bintray {
 	user = 'krishnakumar797'
 	key = 'f550904bbae06357b134998288a41f4809fd56eb'
+	override = true
 	pkg {
 		repo = 'rico'
 		name = 'ro-app'
 		userOrg = 'tp'
 		licenses = ['Apache-2.0']
+		vcsUrl = 'https://github.com/krishnakumar797/roapp.git'
 	}
 	publications = ['roapp']
 }
@@ -29,11 +32,27 @@ repositories {
 	mavenCentral()
 }
 
+test {
+	ignoreFailures = true
+}
+//Plugin declarations
 gradlePlugin {
 	plugins {
+		roAppPlugin {
+			id = 'com.rico.platform.roapp'
+			implementationClass = 'com.rico.platform.RoAppPlugin'
+		}
+		roCommonPlugin {
+			id = 'com.rico.platform.rocommon'
+			implementationClass = 'com.rico.platform.RoCommonPlugin'
+		}
 		dockerRunPlugin {
-			id = 'com.rico.platform.docker'
+			id = 'com.rico.platform.dockerRun'
 			implementationClass = 'com.rico.platform.DockerRunPlugin'
+		}
+		swarmPlugin {
+			id = 'com.rico.platform.swarm'
+			implementationClass = 'com.rico.platform.SwarmPlugin'
 		}
 	}
 }
@@ -44,12 +63,28 @@ publishing {
 		 from components.java
 		 groupId 'com.rico.platform'
 		 artifactId 'ro-app'
-		 version '1.0'
+		 version '2.1'
 	  }
 	}
 }
-
+//Dependencies for the plugin
 dependencies {
 	compileOnly gradleApi()
-	compileOnly 'com.google.guava:guava:29.0-jre'
+	implementation 'com.google.guava:guava:29.0-jre'
+	implementation 'com.github.docker-java:docker-java-core:3.2.5'
+	implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.2.5'
+	
+	testImplementation ("junit:junit:4.13.1")
+	testImplementation gradleTestKit()
+}
+
+
+configurations.all {
+	resolutionStrategy {
+		eachDependency { DependencyResolveDetails details ->
+			if (details.requested.group == 'org.codehaus.groovy') {
+				details.useVersion('3.0.3')
+			}
+		}
+	}
 }
