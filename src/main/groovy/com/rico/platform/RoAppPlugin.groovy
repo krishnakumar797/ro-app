@@ -130,6 +130,10 @@ class RoAppPlugin implements Plugin<Project> {
 							volumes volumeMappings
 							command extension.docker.commands
 							env extension.docker.environment
+							memoryLimitInMB extension.docker.memoryLimitInMB
+							memoryReservationInMB extension.docker.memoryReservationInMB
+							cpuSetLimit extension.docker.cpuSetLimit
+							cpuSetReservation extension.docker.cpuSetReservation
 						}
 					} else {
 						def networkName = 'ingress'
@@ -152,6 +156,10 @@ class RoAppPlugin implements Plugin<Project> {
 							swarmMode extension.docker.swarm.swarmMode.name()
 							replicas extension.docker.swarm.replicas
 							rollbackOnUpdateFailure extension.docker.swarm.rollbackOnUpdateFailure
+							memoryLimitInMB extension.docker.memoryLimitInMB
+							memoryReservationInMB extension.docker.memoryReservationInMB
+							cpuSetLimit extension.docker.cpuSetLimit
+							cpuSetReservation extension.docker.cpuSetReservation
 						}
 					}
 				}

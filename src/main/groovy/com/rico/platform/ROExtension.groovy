@@ -54,6 +54,8 @@ class ROExtension {
 		SwarmMode GLOBAL_MODE = SwarmMode.GLOBAL
 
 		String imageName, containerName, networkName, serviceName
+		Long memoryLimitInMB, memoryReservationInMB
+		Double cpuSetLimit, cpuSetReservation
 		HostPortMapping hostPortMapping
 		VolumeMapping volumeMapping
 		Swarm swarm

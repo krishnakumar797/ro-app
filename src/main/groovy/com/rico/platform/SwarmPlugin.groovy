@@ -9,10 +9,8 @@ import org.gradle.api.Project
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.command.CreateServiceResponse
-import com.github.dockerjava.api.command.InspectServiceCmd
 import com.github.dockerjava.api.command.PullImageResultCallback
 import com.github.dockerjava.api.command.RemoveServiceCmd
-import com.github.dockerjava.api.command.StartContainerCmd
 import com.github.dockerjava.api.model.ContainerSpec
 import com.github.dockerjava.api.model.EndpointResolutionMode
 import com.github.dockerjava.api.model.EndpointSpec
@@ -23,6 +21,8 @@ import com.github.dockerjava.api.model.NetworkAttachmentConfig
 import com.github.dockerjava.api.model.PortConfig
 import com.github.dockerjava.api.model.PortConfigProtocol
 import com.github.dockerjava.api.model.PullResponseItem
+import com.github.dockerjava.api.model.ResourceRequirements
+import com.github.dockerjava.api.model.ResourceSpecs
 import com.github.dockerjava.api.model.Service
 import com.github.dockerjava.api.model.ServiceGlobalModeOptions
 import com.github.dockerjava.api.model.ServiceModeConfig
@@ -131,6 +131,22 @@ class SwarmPlugin implements Plugin<Project> {
 					if (ext.network) {
 						args.put("network", ext.network)
 					}
+					//Adding memory limits and memory reservation
+					if (ext.memoryLimitInMB != null) {
+						args.put("memoryLimitInMB", ext.memoryLimitInMB.toString())
+					}
+					if (ext.memoryReservationInMB != null) {
+						args.put("memoryReservationInMB", ext.memoryReservationInMB.toString())
+					}
+
+					//Adding cpu limits and cpu reservation
+					if (ext.cpuSetLimit != null) {
+						args.put("cpuSetLimit", String.valueOf(ext.cpuSetLimit))
+					}
+					if (ext.cpuSetReservation != null) {
+						args.put("cpuSetReservation", String.valueOf(ext.cpuSetReservation))
+					}
+
 					args.put("rollbackonUpdateFailure", ext.rollbackOnUpdateFailure?"1":"0")
 					//Adding ports
 					List<PortConfig> pConfigList = new ArrayList()
@@ -247,11 +263,52 @@ class SwarmPlugin implements Plugin<Project> {
 
 		//Creating service
 		ServiceSpec serviceSpec = new ServiceSpec()
+		serviceSpec.withName(serviceName)
+
+		//Creating TaskSpec
+		TaskSpec taskSpec = new TaskSpec().withContainerSpec(containerSpec)
+
+		//Adding resource requirements
+		ResourceRequirements resourceRequirements = new ResourceRequirements()
+		ResourceSpecs resourceSpecsLimits = new ResourceSpecs()
+		if(args.get("memoryLimitInMB") != null) {
+			resourceSpecsLimits.withMemoryBytes((Long.parseLong(args.get("memoryLimitInMB"))*1000000))
+		}
+		if(args.get("cpuSetLimit") != null) {
+			resourceSpecsLimits.withNanoCPUs((Long)(Double.parseDouble(args.get("cpuSetLimit"))*1000000000))
+		}
+		if(args.get("memoryLimitInMB") != null || args.get("cpuSetLimit") != null) {
+			resourceRequirements.withLimits(resourceSpecsLimits)
+		}
+	
+		ResourceSpecs resourceSpecsReservation = new ResourceSpecs()		
+		if(args.get("memoryReservationInMB") != null) {
+			resourceSpecsReservation.withMemoryBytes((Long.parseLong(args.get("memoryReservationInMB"))*1000000))
+		}
+		if(args.get("cpuSetReservation") != null) {
+			resourceSpecsReservation.withNanoCPUs((Long)(Double.parseDouble(args.get("cpuSetReservation"))*1000000000))
+		}
+		if(args.get("memoryReservationInMB") != null || args.get("cpuSetReservation") != null) {
+			resourceRequirements.withReservations(resourceSpecsReservation)
+		}
+        taskSpec.withResources(resourceRequirements)
+
 
 		//Adding restart policy
 		ServiceRestartPolicy policy = new ServiceRestartPolicy()
 		policy.withCondition(ServiceRestartCondition.ON_FAILURE)
-		serviceSpec.withName(serviceName).withTaskTemplate(new TaskSpec().withContainerSpec(containerSpec).withRestartPolicy(policy))
+		taskSpec.withRestartPolicy(policy)
+
+		//Attaching network
+		if(!args.get("network").contentEquals("ingress")) {
+			List<NetworkAttachmentConfig> networkAttachmentlist = new ArrayList<>()
+			NetworkAttachmentConfig networkConfig = new NetworkAttachmentConfig()
+			networkConfig.withTarget(args.get("network"))
+			networkAttachmentlist.add(networkConfig)
+			taskSpec.withNetworks(networkAttachmentlist)
+		}
+
+		serviceSpec.withTaskTemplate(taskSpec)
 
 		//Adding Replicated or Global services
 		ServiceModeConfig serviceModeConfig = new ServiceModeConfig()
@@ -274,18 +331,13 @@ class SwarmPlugin implements Plugin<Project> {
 		}
 		serviceSpec.withUpdateConfig(updateConfig)
 
-		//Attaching network
-		List<NetworkAttachmentConfig> networkAttachmentlist = new ArrayList<>()
-		NetworkAttachmentConfig networkConfig = new NetworkAttachmentConfig()
-		networkConfig.withTarget(args.get("network"))
-		networkAttachmentlist.add(networkConfig)
-		serviceSpec.withNetworks(networkAttachmentlist)
-
 		//Attaching published ports
-		EndpointSpec endpoint = new EndpointSpec()
-		endpoint.withMode(EndpointResolutionMode.VIP)
-		endpoint.withPorts(pConfigList)
-		serviceSpec.withEndpointSpec(endpoint)
+		if(!pConfigList.isEmpty()) {
+			EndpointSpec endpoint = new EndpointSpec()
+			endpoint.withMode(EndpointResolutionMode.VIP)
+			endpoint.withPorts(pConfigList)
+			serviceSpec.withEndpointSpec(endpoint)
+		}
 
 		println "Starting the service "+serviceName
 		CreateServiceResponse serviceResponse = dockerClient.createServiceCmd(serviceSpec).exec()

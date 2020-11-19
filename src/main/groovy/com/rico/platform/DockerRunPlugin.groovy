@@ -47,7 +47,7 @@ class DockerRunPlugin implements Plugin<Project> {
 		//Getting system environment variables and configuring the docker client
 		println "Initializing docker config"
 		dockerRegistry = RoUtils.dockerRegistry
-        
+
 		DockerClientConfig config = null
 
 		if(!RoUtils.dockerUser.contentEquals("0") && !RoUtils.dockerPassword.contentEquals("0")) {
@@ -127,6 +127,19 @@ class DockerRunPlugin implements Plugin<Project> {
 					if (ext.network) {
 						args.put('network', ext.network)
 					}
+					//Adding memory limits and memory reservation
+					if (ext.memoryLimitInMB != null) {
+						args.put("memoryLimitInMB", ext.memoryLimitInMB.toString())
+					}
+					if (ext.memoryReservationInMB != null) {
+						args.put("memoryReservationInMB", ext.memoryReservationInMB.toString())
+					}
+
+					//Adding cpu limits
+					if (ext.cpuSetLimit != null) {
+						args.put("cpuSetLimit", String.valueOf(ext.cpuSetLimit))
+					}
+					
 					//Adding ports
 					ExposedPort[] exposedPortArray = new ExposedPort[ext.ports.size()]
 					Ports portBindings = new Ports();
@@ -229,6 +242,17 @@ class DockerRunPlugin implements Plugin<Project> {
 
 		HostConfig hc = new HostConfig();
 		hc.withNetworkMode(args.get("network"))
+
+		if(args.get("memoryLimitInMB") != null) {
+			hc.withMemory((Long.parseLong(args.get("memoryLimitInMB"))*1000000))
+		}
+		if(args.get("cpuSetLimit") != null) {
+			hc.withNanoCPUs((Long)(Double.parseDouble(args.get("cpuSetLimit"))*1000000000))
+		}
+	
+		if(args.get("memoryReservationInMB") != null) {
+			hc.withMemoryReservation((Long.parseLong(args.get("memoryReservationInMB"))*1000000))
+		}
 		
 		if(exposedPortArray.length >0) {
 			containerCmd = containerCmd.withExposedPorts(exposedPortArray)

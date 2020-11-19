@@ -20,6 +20,10 @@ class DockerRunExtension {
 	private String network
 	private String swarmMode
 	private Integer replicas
+	private Long memoryLimitInMB
+	private Long memoryReservationInMB
+	private Double cpuSetLimit
+	private Double cpuSetReservation
 	private boolean rollbackOnUpdateFailure
 	private Set<String> ports = ImmutableSet.of()
 	private Map<String,String> env = ImmutableMap.of()
@@ -135,6 +139,39 @@ class DockerRunExtension {
 
 	public List<String> getArguments() {
 		return arguments
+	}
+
+
+	public Long getMemoryLimitInMB() {
+		return memoryLimitInMB;
+	}
+
+	public void setMemoryLimitInMB(Long memoryLimitInMB) {
+		this.memoryLimitInMB = memoryLimitInMB;
+	}
+
+	public Long getMemoryReservationInMB() {
+		return memoryReservationInMB;
+	}
+
+	public void setMemoryReservationInMB(Long memoryReservationInMB) {
+		this.memoryReservationInMB = memoryReservationInMB;
+	}
+
+	public Double getCpuSetLimit() {
+		return cpuSetLimit;
+	}
+
+	public void setCpuSetLimit(Double cpuSetLimit) {
+		this.cpuSetLimit = cpuSetLimit;
+	}
+
+	public Double getCpuSetReservation() {
+		return cpuSetReservation;
+	}
+
+	public void setCpuSetReservation(Double cpuSetReservation) {
+		this.cpuSetReservation = cpuSetReservation;
 	}
 
 	public void ports(String[] ports) {
