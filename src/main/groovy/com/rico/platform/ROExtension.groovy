@@ -27,6 +27,7 @@ class ROExtension {
 	String logging
 	String monitoring
 	String devTools
+	String javaModule
 	String javaMainClass
 
 	static class Docker {

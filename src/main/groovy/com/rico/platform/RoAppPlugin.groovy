@@ -1,13 +1,16 @@
 package com.rico.platform
 
+import org.gradle.api.plugins.JavaPlugin
+
 import javax.inject.Inject
 
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.internal.reflect.Instantiator
+import org.gradle.api.tasks.compile.JavaCompile
 
-import com.rico.platform.utils.RoUtils
+import com.rico.platform.utils.RoConstants
 /**
  * Custom ro plugin for dependency managment and tools integration
  * 
@@ -35,7 +38,14 @@ class RoAppPlugin implements Plugin<Project> {
 	void apply(Project project) {
 		
 		def extension = project.extensions.create('appConfig', ROExtension, instantiator, project)
-        
+
+		//Deleting module info file if exist
+		def infoFile = project.file("src/main/java/module-info.java")
+		if(infoFile.exists()){
+			println("Clean up module info")
+			infoFile.delete();
+		}
+
 		//Setting build enviroment
 		buildEnv = project.hasProperty('buildEnv') ? project.findProperty('buildEnv') : "local"
 
@@ -52,25 +62,50 @@ class RoAppPlugin implements Plugin<Project> {
 			def props = new Properties()
 
 			project.configure(project) {
+				
+				//Applying Java Modules
+				if(extension.javaModule) {
+					apply plugin: "org.beryx.jlink"
+					application {
+						mainModule = extension.javaMainClass
+						mainClass = extension.javaMainClass
+					}
+					project.plugins.withType(JavaPlugin).configureEach {
+						java {
+							modularity.inferModulePath = true
+						}
+					}
+					jlink {
+						options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+						launcher{
+							name = extension.javaMainClass
+						}
+					}
+				} else {
+					application {
+						mainClass = extension.javaMainClass
+					}
+				}
+				
 				//Applying docker plugin
 				if(extension.docker){
 
 					apply plugin: 'com.google.cloud.tools.jib'
 
-					println "Docker Details - User: ${RoUtils.dockerUser} Password:  ${RoUtils.dockerPassword} ImageName: ${RoUtils.dockerRegistry}/${extension.docker.imageName}"
+					println "Docker Details - User: ${RoConstants.dockerUser} Password:  ${RoConstants.dockerPassword} ImageName: ${RoConstants.dockerRegistry}/${extension.docker.imageName}"
 					/**
 					 Jib containerization
 					 **/
 					jib {
 						from {
-							image = 'openjdk:8u212-jre-alpine'
+							image = 'azul/zulu-openjdk-alpine:11.0.7-jre'
 						}
 						to {
-							image = "${RoUtils.dockerRegistry}/${extension.docker.imageName}"
+							image = "${RoConstants.dockerRegistry}/${extension.docker.imageName}"
 							tags = [tagName]
 							auth {
-								username = RoUtils.dockerUser
-								password = RoUtils.dockerPassword
+								username = RoConstants.dockerUser
+								password = RoConstants.dockerPassword
 							}
 						}
 						container {
@@ -168,10 +203,25 @@ class RoAppPlugin implements Plugin<Project> {
 			project.with {
 				// Defining dependencies
 				dependencies {
+					
+					def moduleInfo
 
 					def propertyFile = file("src/main/resources/projectInfo.properties")
 
 					implementation 'org.springframework.boot:spring-boot-starter'
+					
+					if(extension.javaModule) {
+						moduleInfo = file("src/main/java/module-info.java")
+						moduleInfo.write("module ${extension.javaMainClass} {\n")
+						moduleInfo.append("requires spring.boot;\n")
+						moduleInfo.append("requires spring.context;\n")
+						moduleInfo.append("requires spring.beans;\n")
+						moduleInfo.append("requires java.annotation;\n")
+						moduleInfo.append("requires spring.boot.autoconfigure;\n")
+						moduleInfo.append("requires static lombok;\n")
+						moduleInfo.append("requires com.rico.common;\n")
+						
+					}
 
 					//Adding spring boot test frameworks to all applications
 					testImplementation('org.springframework.boot:spring-boot-starter-test') {
@@ -180,13 +230,17 @@ class RoAppPlugin implements Plugin<Project> {
 					// JUnit testing
 					testImplementation ("org.mockito:mockito-core:3.4.0")
 					testImplementation 'org.mockito:mockito-inline:3.4.6'
-					testImplementation ("org.junit.jupiter:junit-jupiter-api:${RoUtils.junitTestVersion}")
-					testRuntimeOnly ("org.junit.jupiter:junit-jupiter-engine:${RoUtils.junitTestVersion}")
+					testImplementation ("org.junit.jupiter:junit-jupiter-api:${RoConstants.junitTestVersion}")
+					testRuntimeOnly ("org.junit.jupiter:junit-jupiter-engine:${RoConstants.junitTestVersion}")
 					testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.5.2")
 
 
 					if(extension.security == 'y'){
+						if(extension.persistence != 'springData' && extension.persistence != 'hibernate') {
+							throw new GradleException('Security cant be configured without persistence config for the application')
+						}
 						implementation 'org.springframework.boot:spring-boot-starter-security'
+						implementation 'org.springframework.security:spring-security-test'
 						props.setProperty("security.enabled", 'y')
 					}
 					if(extension.monitoring == 'y'){
@@ -196,8 +250,9 @@ class RoAppPlugin implements Plugin<Project> {
 						developmentOnly 'org.springframework.boot:spring-boot-devtools'
 					}
 					if(extension.rest == 'y'){
-						runtimeOnly "org.modelmapper:modelmapper:${RoUtils.modelMapperVersion}"
+						runtimeOnly "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
 						implementation 'org.springframework.boot:spring-boot-starter-web'
+						implementation 'org.springframework.boot:spring-boot-starter-validation'
 						props.setProperty('spring.mvc.throw-exception-if-no-handler-found', 'true')
 						if(extension.security != 'y'){
 							props.setProperty("spring.autoconfigure.exclude", 'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration')
@@ -205,6 +260,11 @@ class RoAppPlugin implements Plugin<Project> {
 
 						jFlags.add('-Dserver.port='+restPortNumber)
 						portNums.add(restPortNumber)
+						
+						if(extension.javaModule) {
+							moduleInfo.append("requires spring.web;\n")
+							moduleInfo.append("requires java.validation;\n")
+						}
 					}
 					if(extension.search == 'y'){
 						implementation 'org.springframework.data:spring-data-elasticsearch'
@@ -224,60 +284,67 @@ class RoAppPlugin implements Plugin<Project> {
 						runtimeOnly 'io.lettuce:lettuce-core'
 					}
 					if(extension.cache == 'y') {
-						runtimeOnly "com.hazelcast:hazelcast:${RoUtils.hazelcastVersion}"
-						runtimeOnly "com.hazelcast:hazelcast-spring:${RoUtils.hazelcastVersion}"
+						runtimeOnly "com.hazelcast:hazelcast:${RoConstants.hazelcastVersion}"
+						runtimeOnly "com.hazelcast:hazelcast-spring:${RoConstants.hazelcastVersion}"
 						props.setProperty("cache.enabled", 'y')
 					}
 					if(extension.queue == 'y') {
 						implementation 'org.springframework.kafka:spring-kafka'
-						runtimeOnly "com.google.protobuf:protobuf-java:${RoUtils.protobufVersion}"
+						runtimeOnly "com.google.protobuf:protobuf-java:${RoConstants.protobufVersion}"
 						runtimeOnly 'de.ruedigermoeller:fst:2.56'
 					}
 					// For both grpc server and grpc client
 					if(extension.grpc == 'y') {
-						testImplementation("io.grpc:grpc-testing:${RoUtils.grpcUnitTestVersion}")
+						testImplementation("io.grpc:grpc-testing:${RoConstants.grpcUnitTestVersion}")
 						if(extension.rest != 'y'){
 							runtimeOnly 'jakarta.validation:jakarta.validation-api'
 						}
-						implementation "net.devh:grpc-spring-boot-starter:${RoUtils.grpcVersion}"
+						implementation "net.devh:grpc-spring-boot-starter:${RoConstants.grpcVersion}"
 
 						portNums.add(grpcPortNumber)
 
 					}else if(extension.grpcServer == 'y') {
-						testImplementation("io.grpc:grpc-testing:${RoUtils.grpcUnitTestVersion}")
+						testImplementation("io.grpc:grpc-testing:${RoConstants.grpcUnitTestVersion}")
 						// For grpc server
 						if(extension.rest != 'y'){
 							runtimeOnly 'jakarta.validation:jakarta.validation-api'
 						}
-						implementation "net.devh:grpc-server-spring-boot-starter:${RoUtils.grpcVersion}"
-						runtimeOnly "io.grpc:grpc-stub:${RoUtils.protocJavaVersion}"
+						implementation "net.devh:grpc-server-spring-boot-starter:${RoConstants.grpcVersion}"
+						runtimeOnly "io.grpc:grpc-stub:${RoConstants.protocJavaVersion}"
 
 						portNums.add(grpcPortNumber)
 
 					}else if(extension.grpcClient == 'y') {
-						testImplementation("io.grpc:grpc-testing:${RoUtils.grpcUnitTestVersion}")
+						testImplementation("io.grpc:grpc-testing:${RoConstants.grpcUnitTestVersion}")
 						// For grpc client
-						implementation "net.devh:grpc-client-spring-boot-starter:${RoUtils.grpcVersion}"
+						implementation "net.devh:grpc-client-spring-boot-starter:${RoConstants.grpcVersion}"
 					}
 
 					if(extension.grpc == 'y' || extension.grpcClient == 'y') {
-						implementation "io.grpc:grpc-stub:${RoUtils.protocJavaVersion}"
+						implementation "io.grpc:grpc-stub:${RoConstants.protocJavaVersion}"
 					}
 					if(extension.grpc == 'y' || extension.grpcServer == 'y' || extension.grpcClient == 'y') {
-						runtimeOnly "io.grpc:grpc-protobuf:${RoUtils.protocJavaVersion}"
-						runtimeOnly "io.grpc:grpc-netty-shaded:${RoUtils.protocJavaVersion}"
+						runtimeOnly "io.grpc:grpc-protobuf:${RoConstants.protocJavaVersion}"
+						runtimeOnly "io.grpc:grpc-netty-shaded:${RoConstants.protocJavaVersion}"
 					}
 
 					if(extension.persistence == 'springData') {
 						implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 						props.setProperty("persistence", 'springData')
+						if(extension.javaModule) {
+							moduleInfo.append("requires spring.data.jpa;\n")
+							moduleInfo.append("requires spring.data.commons;\n")
+							moduleInfo.append("requires java.persistence;\n")
+							moduleInfo.append("requires spring.tx;\n")
+						}
 					}
 
 					if(extension.persistence == 'hibernate') {
-						implementation "org.springframework:spring-tx:${RoUtils.springVersion}"
+						implementation "org.springframework:spring-tx:${RoConstants.springVersion}"
+						implementation "jakarta.persistence:jakarta.persistence-api"
 						runtimeOnly 'org.springframework.data:spring-data-jpa'
-						runtimeOnly "org.springframework:spring-aspects:${RoUtils.springVersion}"
-						runtimeOnly "org.springframework:spring-orm:${RoUtils.springVersion}"
+						runtimeOnly "org.springframework:spring-aspects:${RoConstants.springVersion}"
+						runtimeOnly "org.springframework:spring-orm:${RoConstants.springVersion}"
 						runtimeOnly 'org.hibernate:hibernate-core'
 						runtimeOnly 'com.zaxxer:HikariCP'
 
@@ -300,11 +367,20 @@ class RoAppPlugin implements Plugin<Project> {
 					if(extension.logging == 'y') {
 						implementation 'org.springframework.boot:spring-boot-starter-log4j2'
 						props.setProperty("log.enabled", 'y')
+						if(extension.javaModule) {
+						  moduleInfo.append("requires org.apache.logging.log4j;\n")
+						}
 					}
 
 					//Writing project infos
 					props.setProperty("version", project.version)
 					props.store propertyFile.newWriter(), "DO NOT MODIFY THIS FILE"
+					
+					//Ending java modules block
+					if(extension.javaModule) {
+						moduleInfo.append("}")
+
+					}
 				}
 
 				//Defining custom build task

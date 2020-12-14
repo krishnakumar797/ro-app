@@ -1,74 +1,287 @@
 package com.rico.platform
 
+import org.gradle.api.tasks.compile.JavaCompile
+
 import javax.inject.Inject
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.internal.reflect.Instantiator
+import org.gradle.api.plugins.JavaPlugin
 
-import com.rico.platform.utils.RoUtils
+import com.rico.platform.utils.RoConstants
+
 /**
  * Common ro plugin for dependency managment
- * 
- * @author krishna
  *
+ * @author krishna*
  */
 class RoCommonPlugin implements Plugin<Project> {
 
 
-	final Instantiator instantiator;
+    final Instantiator instantiator;
+    private boolean isModularised;
+    private Map<String, Boolean> configMap = new HashMap<>()
 
-	@Inject
-	RoCommonPlugin(Instantiator instantiator) {
-		this.instantiator = instantiator;
-	}
+    @Inject
+    RoCommonPlugin(Instantiator instantiator) {
+        this.instantiator = instantiator;
+    }
 
-	void apply(Project project) {
+    void apply(Project project) {
 
-		project.afterEvaluate {
+        //Deleting module info file if exist
+        def infoFile = project.file("src/main/java/module-info.java")
+        if (infoFile.exists()) {
+            println("Clean up module info")
+            infoFile.delete();
+        }
+        project.afterEvaluate {
+            //Getting Package names in the common folder
+            def sourceSet = project.sourceSets.findByName('main').java
+            def packages = sourceSet
+                    .filter { it.path.endsWith('.java') }
+                    .collect {
+                        it.getParentFile().path
+                                .substring(sourceSet.srcDirs[0].path.length() + 1)
+                                .replace('/', '.')
+                    }
+                    .unique()
 
-			project.with {
-				dependencies {
-					compileOnly "org.springframework.security:spring-security-web"
-					compileOnly "org.springframework.security:spring-security-config"
+            packages.each {
+                if (it.contains("couchbase")) {
+                    configMap.put("couchbase", true)
+                }
+                if (it.contains("kafka")) {
+                    configMap.put("kafka", true)
+                }
+                if (it.contains("redis")) {
+                    configMap.put("redis", true)
+                }
+                if (it.contains("grpc")) {
+                    configMap.put("grpc", true)
+                }
+                if (it.contains("logging")) {
+                    configMap.put("logging", true)
+                }
+                if (it.contains("security")) {
+                    configMap.put("security", true)
+                }
+                if (it.contains("rest")) {
+                    configMap.put("rest", true)
+                }
+                if (it.contains("elasticsearch")) {
+                    configMap.put("elasticsearch", true)
+                }
+                if (it.contains("springdata")) {
+                    configMap.put("springdata", true)
+                }
+                if (it.contains("hibernate")) {
+                    configMap.put("hibernate", true)
+                }
+                if (it.contains("hazelcast")) {
+                    configMap.put("hazelcast", true)
+                }
+                if (it.contains("hazelcast")) {
+                    configMap.put("hazelcast", true)
+                }
 
-					compileOnly 'org.springframework.data:spring-data-couchbase'
-					compileOnly 'org.springframework.kafka:spring-kafka'
 
-					compileOnly 'org.springframework.data:spring-data-redis'
-					compileOnly "com.google.protobuf:protobuf-java:${RoUtils.protobufVersion}"
+            }
 
-					compileOnly "net.devh:grpc-spring-boot-starter:${RoUtils.grpcVersion}"
-					compileOnly "io.grpc:grpc-protobuf:${RoUtils.protocJavaVersion}"
-					compileOnly "io.grpc:grpc-stub:${RoUtils.protocJavaVersion}"
-					compileOnly "io.grpc:grpc-netty-shaded:${RoUtils.protocJavaVersion}"
+            //Getting Ro app extension
+            Map<String, Project> childProjects = project.rootProject.getChildProjects()
+            for (Map.Entry<String, Project> map : childProjects) {
+                if (!map.getKey().contentEquals(project.getName())) {
+                    Project project1 = map.getValue()
+                    ROExtension extension = (ROExtension) project1.getExtensions().findByName("appConfig")
+                    if (extension.javaModule) {
+                        isModularised = true
+                        break
+                    }
+                }
+            }
+            println "Is modularised " + isModularised
 
-					compileOnly 'io.lettuce:lettuce-core'
-					compileOnly 'de.ruedigermoeller:fst:2.56'
+            project.configure(project) {
+                ext {
+                    set('elasticsearch.version', '7.0.0')
+                }
+                if (isModularised) {
+//                    apply plugin: 'de.jjohannes.extra-java-module-info'
+//                    extraJavaModuleInfo {
+//                        if (configMap.get("grpc")) {
+//                            automaticModule("grpc-server-spring-boot-autoconfigure-2.10.1.RELEASE.jar", "grpc.server.spring.boot.autoconfigure")
+//                            automaticModule("grpc-client-spring-boot-autoconfigure-2.10.1.RELEASE.jar", "grpc.client.spring.boot.autoconfigure")
+//                        }
+//                        if (configMap.get("kafka")) {
+//                            automaticModule("kafka-clients-2.3.1.jar", "kafka.clients")
+//                        }
+//                    }
+                    project.plugins.withType(JavaPlugin).configureEach {
+                        java {
+                            modularity.inferModulePath = true
+                        }
+                    }
+                }
+            }
 
-					compileOnly 'org.apache.logging.log4j:log4j-api'
-					compileOnly 'org.apache.logging.log4j:log4j-core'
+            project.with {
+                dependencies {
 
-					compileOnly 'org.springframework.data:spring-data-elasticsearch'
-					compileOnly 'org.springframework.data:spring-data-jpa'
-					compileOnly 'org.hibernate:hibernate-entitymanager'
-					compileOnly 'mysql:mysql-connector-java'
-					compileOnly 'org.postgresql:postgresql'
-					compileOnly 'com.zaxxer:HikariCP'
+                    def commonModuleInfo
 
-					compileOnly "com.hazelcast:hazelcast:${RoUtils.hazelcastVersion}"
-					compileOnly "com.hazelcast:hazelcast-spring:${RoUtils.hazelcastVersion}"
+                    if (isModularised) {
+                        commonModuleInfo = file("src/main/java/module-info.java")
+                        commonModuleInfo.write("module com.rico.common {\n")
+                        commonModuleInfo.append("requires static spring.core;\n")
+                        commonModuleInfo.append("requires static spring.boot;\n")
+                        commonModuleInfo.append("requires static spring.boot.autoconfigure;\n")
+                        commonModuleInfo.append("requires static spring.beans;\n")
+                        commonModuleInfo.append("requires static java.annotation;\n")
+                        commonModuleInfo.append("requires static spring.context;\n")
+                        commonModuleInfo.append("requires static lombok;\n")
+                    }
+                    compileOnly "com.sun.activation:jakarta.activation:${RoConstants.jakartaVersion}"
+                    compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
 
-					compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
-					compileOnly 'org.springframework.boot:spring-boot-actuator-autoconfigure'
-					compileOnly "org.modelmapper:modelmapper:${RoUtils.modelMapperVersion}"
-					compileOnly 'org.springframework:spring-webmvc'
-					compileOnly 'jakarta.validation:jakarta.validation-api'
-					compileOnly "javax.servlet:servlet-api:${RoUtils.servletApiVersin}"
 
-					implementation "org.javassist:javassist:${RoUtils.javaAssistVersion}"
-				}
-			}
-		}
-	}
+                    if (configMap.get("couchbase")) {
+                        compileOnly 'org.springframework.data:spring-data-couchbase'
+                        if (isModularised) {
+                            commonModuleInfo.append("requires static spring.data.couchbase;\n")
+                            commonModuleInfo.append("requires static com.couchbase.client.java;\n")
+                            commonModuleInfo.append("requires static com.couchbase.client.core;\n")
+                        }
+                    }
+                    if (configMap.get("kafka")) {
+                        compileOnly 'org.springframework.kafka:spring-kafka'
+                        compileOnly 'com.esotericsoftware.kryo:kryo5:5.0.2'
+                        if (isModularised) {
+                            commonModuleInfo.append("requires static spring.kafka;\n")
+                            commonModuleInfo.append("requires static kafka.clients;\n")
+                            commonModuleInfo.append("requires static com.google.protobuf;\n")
+                            commonModuleInfo.append("requires static com.esotericsoftware.kryo.kryo5;\n")
+                        }
+                    }
+                    if (configMap.get("redis")) {
+                        compileOnly 'org.springframework.data:spring-data-redis'
+                        compileOnly 'io.lettuce:lettuce-core'
+                        if (isModularised) {
+                            commonModuleInfo.append("requires static spring.data.redis;\n")
+                        }
+                    }
+
+                    if (configMap.get("grpc")) {
+                        compileOnly "net.devh:grpc-spring-boot-starter:${RoConstants.grpcVersion}"
+                        compileOnly "io.grpc:grpc-protobuf:${RoConstants.protocJavaVersion}"
+                        compileOnly "io.grpc:grpc-stub:${RoConstants.protocJavaVersion}"
+                        compileOnly "io.grpc:grpc-netty-shaded:${RoConstants.protocJavaVersion}"
+                        if (isModularised) {
+                            commonModuleInfo.append("requires static grpc.client.spring.boot.autoconfigure;\n")
+                            commonModuleInfo.append("requires static grpc.api;\n")
+                            commonModuleInfo.append("requires static grpc.server.spring.boot.autoconfigure;\n")
+                        }
+                    }
+
+
+                    if (configMap.get("logging")) {
+                        compileOnly 'org.apache.logging.log4j:log4j-api'
+                        compileOnly 'org.apache.logging.log4j:log4j-core'
+                        if (isModularised) {
+                            commonModuleInfo.append("requires static org.apache.logging.log4j.core;\n")
+                        }
+                    }
+
+                    if (configMap.get("elasticsearch")) {
+                        compileOnly 'org.springframework.data:spring-data-elasticsearch'
+                        if (!configMap.get("rest")) {
+                            compileOnly('org.springframework.boot:spring-boot-starter-web') {
+                                exclude module: "spring-boot-tomcat"
+                            }
+                        }
+                        if (isModularised) {
+                            commonModuleInfo.append("requires static elasticsearch.rest.high.level.client;\n")
+                            commonModuleInfo.append("requires static spring.data.elasticsearch;\n")
+                        }
+                    }
+                    if (configMap.get("springdata")) {
+                        compileOnly 'org.springframework.data:spring-data-jpa'
+                        if (isModularised) {
+                            commonModuleInfo.append("requires static spring.orm;\n")
+                            commonModuleInfo.append("requires static com.zaxxer.hikari;\n")
+                            commonModuleInfo.append("requires static java.sql;\n")
+                            commonModuleInfo.append("requires static spring.tx;\n")
+                        }
+                    }
+                    if (configMap.get("hibernate")) {
+                        compileOnly 'org.hibernate:hibernate-entitymanager'
+                    }
+
+                    if (configMap.get("hazelcast")) {
+                        compileOnly "com.hazelcast:hazelcast:${RoConstants.hazelcastVersion}"
+                        compileOnly "com.hazelcast:hazelcast-spring:${RoConstants.hazelcastVersion}"
+                        if (isModularised) {
+                            commonModuleInfo.append("requires static com.hazelcast.core;\n")
+                        }
+                    }
+
+                    if (configMap.get("monitoring")) {
+                        compileOnly 'org.springframework.boot:spring-boot-actuator-autoconfigure'
+                    }
+
+                    if (configMap.get("security")) {
+                        compileOnly "org.springframework.security:spring-security-web"
+                        compileOnly "org.springframework.security:spring-security-config"
+                    }
+
+                    if (configMap.get("rest")) {
+                        compileOnly "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
+                        compileOnly 'org.springframework:spring-webmvc'
+                        compileOnly 'jakarta.validation:jakarta.validation-api'
+                        compileOnly "javax.servlet:servlet-api:${RoConstants.servletApiVersin}"
+                        if (isModularised) {
+                            commonModuleInfo.append("requires static spring.webmvc;\n")
+                            commonModuleInfo.append("requires static modelmapper;\n")
+                            commonModuleInfo.append("requires static java.validation;\n")
+                        }
+                    }
+
+                    implementation "org.javassist:javassist:${RoConstants.javaAssistVersion}"
+
+                    // JUnit testing
+                    testImplementation("org.mockito:mockito-core:3.4.0")
+                    testImplementation 'org.mockito:mockito-inline:3.4.6'
+                    testImplementation("org.junit.jupiter:junit-jupiter-api:${RoConstants.junitTestVersion}")
+                    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${RoConstants.junitTestVersion}")
+                    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.5.2")
+
+                    //Common libs
+                    if (configMap.get("springdata") || configMap.get("hibernate")) {
+                        compileOnly 'com.zaxxer:HikariCP'
+                    }
+                    if (configMap.get("kafka") || configMap.get("grpc")) {
+                        compileOnly "com.google.protobuf:protobuf-java:${RoConstants.protobufVersion}"
+                    }
+
+
+                    //Common modules
+                    if (isModularised) {
+                        if (configMap.get("couchbase") || configMap.get("hibernate") || configMap.get("springdata") || configMap.get("elasticsearch")) {
+                            commonModuleInfo.append("requires static spring.data.jpa;\n")
+                            commonModuleInfo.append("requires static spring.data.commons;\n")
+                        }
+                        if (configMap.get("elasticsearch") || configMap.get("rest")) {
+                            commonModuleInfo.append("requires static spring.web;\n")
+                        }
+                        if (configMap.get("hibernate") || configMap.get("springdata")) {
+                            commonModuleInfo.append("requires static org.hibernate.orm.core;\n")
+                        }
+
+                        commonModuleInfo.append("}")
+                    }
+                }
+            }
+        }
+    }
 }
