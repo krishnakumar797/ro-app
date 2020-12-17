@@ -85,8 +85,9 @@ class RoCommonPlugin implements Plugin<Project> {
                 if (it.contains("hazelcast")) {
                     configMap.put("hazelcast", true)
                 }
-
-
+                if (it.contains("web")) {
+                    configMap.put("web", true)
+                }
             }
 
             //Getting Ro app extension
@@ -233,6 +234,7 @@ class RoCommonPlugin implements Plugin<Project> {
                     if (configMap.get("security")) {
                         compileOnly "org.springframework.security:spring-security-web"
                         compileOnly "org.springframework.security:spring-security-config"
+                        compileOnly "com.auth0:java-jwt:${RoConstants.jwtVersion}"
                     }
 
                     if (configMap.get("rest")) {
@@ -246,6 +248,25 @@ class RoCommonPlugin implements Plugin<Project> {
                             commonModuleInfo.append("requires static java.validation;\n")
                         }
                     }
+
+                    if (configMap.get("web")) {
+                        compileOnly  'org.springframework.boot:spring-boot-starter-thymeleaf'
+                        if(!configMap.get("rest")) {
+                            compileOnly "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
+                            compileOnly 'org.springframework:spring-webmvc'
+                            compileOnly 'jakarta.validation:jakarta.validation-api'
+                            compileOnly "javax.servlet:servlet-api:${RoConstants.servletApiVersin}"
+                        }
+                        if (isModularised) {
+                            if(!configMap.get("rest")) {
+                                commonModuleInfo.append("requires static spring.webmvc;\n")
+                                commonModuleInfo.append("requires static modelmapper;\n")
+                                commonModuleInfo.append("requires static java.validation;\n")
+                            }
+                        }
+                    }
+
+
 
                     implementation "org.javassist:javassist:${RoConstants.javaAssistVersion}"
 

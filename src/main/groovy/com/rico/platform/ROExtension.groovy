@@ -23,6 +23,7 @@ class ROExtension {
 	String grpcServer
 	String grpcClient
 	String rest
+	String web
 	String search
 	String logging
 	String monitoring
