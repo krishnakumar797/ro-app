@@ -88,6 +88,9 @@ class RoCommonPlugin implements Plugin<Project> {
                 if (it.contains("web")) {
                     configMap.put("web", true)
                 }
+                if (it.contains("uaa")) {
+                    configMap.put("uaa", true)
+                }
             }
 
             //Getting Ro app extension
@@ -235,6 +238,11 @@ class RoCommonPlugin implements Plugin<Project> {
                         compileOnly "org.springframework.security:spring-security-web"
                         compileOnly "org.springframework.security:spring-security-config"
                         compileOnly "com.auth0:java-jwt:${RoConstants.jwtVersion}"
+                    }
+
+                    if (configMap.get("uaa")) {
+                        compileOnly "org.springframework.boot:spring-boot-starter-oauth2-client"
+                        compileOnly "org.springframework.security.oauth.boot:spring-security-oauth2-autoconfigure:2.2.1.RELEASE"
                     }
 
                     if (configMap.get("rest")) {

@@ -25,6 +25,7 @@ class ROExtension {
 	String rest
 	String web
 	String search
+	String identityManager
 	String logging
 	String monitoring
 	String devTools
