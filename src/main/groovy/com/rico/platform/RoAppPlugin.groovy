@@ -218,11 +218,12 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                 }
                 if (project.appConfig.identityManager) {
-                    if (project.appConfig.identityManager != "uaa" && project.appConfig.identityManager != "keycloak") {
-                        throw new GradleException('Unsupported identityManager ' + project.appConfig.identityManager + ". Supports only uaa or keycloak.")
+                   println project.appConfig.identityManager.idmName.name()
+                    if (project.appConfig.identityManager.idmName.name() != "UAA" && project.appConfig.identityManager.idmName.name() != "KEYCLOAK") {
+                        throw new GradleException('Unsupported identityManager ' + project.appConfig.identityManager + ". Supports only UAA or KEYCLOAK.")
                     }
                     if (project.appConfig.security) {
-                        throw new GradleException('Security is is implicitly configured for identityManager ' + project.appConfig.identityManager + '. Remove security config already added.');
+                        throw new GradleException('Security is implicitly configured for identityManager ' + project.appConfig.identityManager + '. Remove security config already added.');
                     }
                 }
                 if (project.appConfig.dataBase) {
@@ -245,7 +246,7 @@ class RoAppPlugin implements Plugin<Project> {
                     if (project.appConfig.persistence != "springData") {
                         throw new GradleException('Multitenancy is not supported for ' + project.appConfig.persistence + '. Supports only springData.')
                     }
-                    if (!project.appConfig.rest || !project.appConfig.grpc || !project.appConfig.grpcServer) {
+                    if (!project.appConfig.rest && !project.appConfig.grpc && !project.appConfig.grpcServer) {
                         throw new GradleException('Rest Or Grpc Server should be enabled for Multitenancy support')
                     }
                 }
@@ -285,6 +286,9 @@ class RoAppPlugin implements Plugin<Project> {
                 }
                 if (project.appConfig.web) {
                     enabledServices += "web "
+                }
+                if (project.appConfig.identityManager) {
+                    enabledServices += "uaa "
                 }
                 if (project.appConfig.security) {
                     enabledServices += project.appConfig.security + "-security "
@@ -339,9 +343,25 @@ class RoAppPlugin implements Plugin<Project> {
                         props.setProperty("security.enabled", extension.security)
                     }
 
-                    if (extension.identityManager == 'uaa') {
-                        implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+                    if (extension.identityManager && project.appConfig.identityManager.idmName.name() == 'UAA') {
+                        //Configuring security with UAA identity manager
+                        if(extension.identityManager.uaaClient == 'y') {
+                            implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+                        }
+                        if(extension.identityManager.uaaResourceServer == 'y') {
+                            implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+                            implementation 'org.springframework.security.oauth.boot:spring-security-oauth2-autoconfigure:2.2.1.RELEASE'
+                            implementation 'org.springframework.security:spring-security-oauth2-jose'
+                        }
+                        if (extension.rest != 'y' && extension.web != 'y') {
+                            throw new GradleException("UAA cant be configured without rest or web config for the application")
+                        }
+
+                        implementation 'org.springframework.boot:spring-boot-starter-security'
+                        implementation 'org.springframework.security:spring-security-test'
+                        props.setProperty("security.enabled", "form")
                     }
+
                     if (extension.security == 'jwt') {
                         implementation "com.auth0:java-jwt:${RoConstants.jwtVersion}"
                     }
@@ -521,9 +541,34 @@ class RoAppPlugin implements Plugin<Project> {
                         dependsOn buildApp
                         finalizedBy bootRun
                     }
+
+                    //Defining custom debug task
+                    def debugApp = tasks.register("debug-${project.name}") {
+                        if(project.gradle.startParameter.taskNames[0] != null && project.gradle.startParameter.taskNames[0].startsWith('debug')) {
+                            bootRun {
+                                jvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,address=9000,suspend=y"]
+                            }
+                        }
+                        group = 'ro'
+                        description = 'Debug application'
+                        dependsOn buildApp
+                        finalizedBy bootRun
+                    }
                 } else {
                     //Defining custom run task
                     def runApp = tasks.register("run-${project.name}") {
+                        group = 'ro'
+                        description = 'Run application'
+                        dependsOn bootWar
+                        finalizedBy run
+                    }
+                    //Defining custom debug task
+                    def debugApp = tasks.register("debug-${project.name}") {
+                        if(project.gradle.startParameter.taskNames[0] != null && project.gradle.startParameter.taskNames[0].startsWith('debug')) {
+                            run {
+                                jvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,address=9000,suspend=y"]
+                            }
+                        }
                         group = 'ro'
                         description = 'Run application'
                         dependsOn bootWar

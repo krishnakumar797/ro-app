@@ -242,6 +242,8 @@ class RoCommonPlugin implements Plugin<Project> {
 
                     if (configMap.get("uaa")) {
                         compileOnly "org.springframework.boot:spring-boot-starter-oauth2-client"
+                        compileOnly "org.springframework.boot:spring-boot-starter-oauth2-resource-server"
+                        compileOnly "org.springframework.security:spring-security-oauth2-jose"
                         compileOnly "org.springframework.security.oauth.boot:spring-security-oauth2-autoconfigure:2.2.1.RELEASE"
                     }
 

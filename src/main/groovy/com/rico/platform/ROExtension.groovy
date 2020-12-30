@@ -25,12 +25,36 @@ class ROExtension {
 	String rest
 	String web
 	String search
-	String identityManager
 	String logging
 	String monitoring
 	String devTools
 	String javaModule
 	String javaMainClass
+
+	static class IdentityManager {
+
+		enum IdmName {
+			UAA, KEYCLOAK
+		}
+
+		IdmName UAA = IdmName.UAA
+		IdmName KEYCLOAK = IdmName.KEYCLOAK
+		IdmName idmName
+		String uaaClient, uaaResourceServer
+		Project project
+
+		IdentityManager(Project project) {
+			this.project = project
+		}
+	}
+
+	IdentityManager identityManager
+
+	IdentityManager identityManager(Closure closure) {
+		identityManager = new IdentityManager(this.project)
+		this.project.configure(identityManager, closure)
+		return identityManager
+	}
 
 	static class Docker {
 
