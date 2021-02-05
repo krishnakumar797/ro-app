@@ -77,6 +77,13 @@ class ROExtension {
 			boolean rollbackOnUpdateFailure
 		}
 
+		static class HelmChart {
+			String chartName
+			String chartVersion
+			Map<String, String> values = new HashMap<>()
+		}
+
+
 		SwarmMode REPLICATED_MODE = SwarmMode.REPLICATED
 		SwarmMode GLOBAL_MODE = SwarmMode.GLOBAL
 
@@ -86,6 +93,7 @@ class ROExtension {
 		HostPortMapping hostPortMapping
 		VolumeMapping volumeMapping
 		Swarm swarm
+		HelmChart helmChart
 		Map<String, String> environment = new HashMap<>()
 		List<String> commands = new ArrayList<>()
 		Project project
@@ -110,6 +118,12 @@ class ROExtension {
 			def swarm = new Swarm()
 			this.project.configure(swarm, closure)
 			this.swarm = swarm
+		}
+
+		void helmChart(Closure closure) {
+			def helmChart = new HelmChart()
+			this.project.configure(helmChart, closure)
+			this.helmChart = helmChart
 		}
 
 		@Override

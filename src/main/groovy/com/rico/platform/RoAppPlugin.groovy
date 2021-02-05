@@ -24,15 +24,18 @@ class RoAppPlugin implements Plugin<Project> {
     String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv
     def portNums = []
     def jFlags = []
+    def kubeConfigFile
 
     @Inject
     RoAppPlugin(Instantiator instantiator) {
         this.instantiator = instantiator;
-        restPortNumber = "8080"
-        debugPortNumber = "8888"
-        grpcPortNumber = "8090"
+        restPortNumber = System.getenv('REST_PORT') ?: "8080"
+        debugPortNumber = System.getenv('DEBUG_PORT') ?: "8888"
+        grpcPortNumber = System.getenv('GRPC_PORT') ?: "8090"
         tagName = System.getenv('TAG_NAME') ?: "latest"
         dbHost = System.getenv('DB_HOST') ?: "127.0.0.1"
+        def kubeConfig = System.getenv('KUBECONFIG')?:'$HOME/.kube/config'
+        kubeConfigFile = new File(kubeConfig);
     }
 
     void apply(Project project) {
@@ -61,6 +64,7 @@ class RoAppPlugin implements Plugin<Project> {
 
             def props = new Properties()
 
+            //Applying configuration for each project
             project.configure(project) {
 
                 //Applying war plugin
@@ -202,10 +206,57 @@ class RoAppPlugin implements Plugin<Project> {
                             cpuSetReservation extension.docker.cpuSetReservation
                         }
                     }
+
+                    //Applying helm plugin
+                    if (extension.docker.helmChart != null) {
+                        apply plugin: 'org.unbroken-dome.helm'
+                        apply plugin: 'org.unbroken-dome.helm-releases'
+                        apply plugin: 'org.unbroken-dome.helm-commands'
+
+                        //Testing if all the required properties are mapped for values.yaml
+                        def valuesYaml = new File('src/main/helm/values.yaml')
+                        def binding = new HashMap()
+                        if(valuesYaml.exists()){
+                            try {
+                                def engine = new groovy.text.SimpleTemplateEngine()
+                                binding.put('imageName', jib.to.image);
+                                binding.put('imageTag', jib.to.tags.first());
+                                binding.put('buildEnv', buildEnv);
+                                binding.put('restPort', restPortNumber);
+                                binding.put('debugPort', debugPortNumber);
+                                binding.putAll(extension.docker.helmChart.values)
+                                def template = engine.createTemplate(valuesYaml).make(binding).toString()
+                                binding.remove('out')
+                            }catch(MissingPropertyException exc){
+                                throw new GradleException("Required property '${exc.getProperty()}' missing from helmChart.values " +
+                                        "array for values.yaml file.")
+                            }
+                        }
+                        helm {
+                            kubeConfig = kubeConfig
+                            downloadClient {
+                                enabled = true
+                                version = '3.4.1'
+                            }
+                            lint {
+                                strict = true
+                            }
+                            charts {
+                                main {
+                                    chartName = extension.docker.helmChart.chartName
+                                    chartVersion = extension.docker.helmChart.chartVersion
+                                    sourceDir = file('src/main/helm')
+                                }
+                            }
+                            filtering {
+                                values.putAll(binding)
+                            }
+                        }
+                    }
                 }
 
-                //Mandatory checks
 
+                //Mandatory checks
                 if (!project.appConfig.appName) {
                     throw new GradleException('App name is not configured for the application')
                 }
@@ -295,6 +346,8 @@ class RoAppPlugin implements Plugin<Project> {
                 }
                 println "Enabled services are : ${enabledServices}"
             }
+
+            //Adding dependencies for each project
 
             project.with {
                 // Defining dependencies
