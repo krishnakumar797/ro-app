@@ -139,11 +139,13 @@ class RoAppPlugin implements Plugin<Project> {
                             portMappings = portMappings.concat("${extension.docker.hostPortMapping.hostDebugPort}:${debugPortNumber}")
                         }
                     }
-                    def portMappingArray = portMappings.split(",") as String[]
+                    def portMappingArray = []
 
                     if (!portMappings.isEmpty()) {
+                        portMappingArray = portMappings.split(",") as String[]
                         println "Ports Opened - ${portMappings}"
                     }
+
 
                     extension.docker.environment.put('DB_HOST', dbHost)
 
@@ -158,7 +160,7 @@ class RoAppPlugin implements Plugin<Project> {
                     }
 
 
-                    if (extension.docker.swarm == null) {
+                    if (extension.docker.swarm == null && extension.docker.helmChart == null) {
                         def networkName = 'bridge'
                         if (extension.docker.networkName) {
                             networkName = extension.docker.networkName
@@ -169,7 +171,9 @@ class RoAppPlugin implements Plugin<Project> {
                             name extension.docker.containerName
                             image extension.docker.imageName
                             tag tagName
-                            ports portMappingArray
+                            if(portMappingArray.length != 0) {
+                                ports portMappingArray
+                            }
                             network networkName
                             volumes volumeMappings
                             command extension.docker.commands
@@ -179,7 +183,7 @@ class RoAppPlugin implements Plugin<Project> {
                             cpuSetLimit extension.docker.cpuSetLimit
                             cpuSetReservation extension.docker.cpuSetReservation
                         }
-                    } else {
+                    } else if(extension.docker.swarm != null) {
                         def networkName = 'ingress'
                         if (extension.docker.networkName) {
                             networkName = extension.docker.networkName
@@ -233,7 +237,7 @@ class RoAppPlugin implements Plugin<Project> {
                             }
                         }
                         helm {
-                            kubeConfig = kubeConfig
+                            kubeConfig = kubeConfigFile
                             downloadClient {
                                 enabled = true
                                 version = '3.4.1'
@@ -250,6 +254,14 @@ class RoAppPlugin implements Plugin<Project> {
                             }
                             filtering {
                                 values.putAll(binding)
+                            }
+                            releases {
+                                main {
+                                    from charts.main
+                                    version = extension.docker.helmChart.chartVersion
+                                    releaseName = extension.docker.helmChart.chartName
+                                    wait = true
+                                }
                             }
                         }
                     }
