@@ -370,6 +370,7 @@ class RoAppPlugin implements Plugin<Project> {
                     def propertyFile = file("src/main/resources/projectInfo.properties")
 
                     implementation 'org.springframework.boot:spring-boot-starter'
+                    implementation 'javax.annotation:javax.annotation-api'
 
                     if (extension.javaModule) {
                         moduleInfo = file("src/main/java/module-info.java")
