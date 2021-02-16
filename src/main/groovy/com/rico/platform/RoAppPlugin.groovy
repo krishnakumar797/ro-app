@@ -25,9 +25,9 @@ class RoAppPlugin implements Plugin<Project> {
 	@Inject
 	RoAppPlugin(Instantiator instantiator) {
 		this.instantiator = instantiator;
-		restPortNumber = "8080"
-		debugPortNumber = "8888"
-		grpcPortNumber = "8090"
+		restPortNumber = System.getenv('REST_PORT') ?: "8080"
+		debugPortNumber = System.getenv('DEBUG_PORT') ?: "8888"
+		grpcPortNumber = System.getenv('GRPC_PORT') ?: "8090"
 		tagName = System.getenv('TAG_NAME') ?: "latest"
 		dbHost = System.getenv('DB_HOST') ?: "127.0.0.1"
 	}
@@ -114,9 +114,10 @@ class RoAppPlugin implements Plugin<Project> {
 					}
 					
 
-					if(extension.docker.swarm == null){
+					if(extension.docker.swarm == null) {
+						if (!RoUtils.dockerHost.isEmpty()) {
 						def networkName = 'bridge'
-						if(extension.docker.networkName) {
+						if (extension.docker.networkName) {
 							networkName = extension.docker.networkName
 						}
 						apply plugin: 'com.rico.platform.dockerRun'
@@ -135,31 +136,38 @@ class RoAppPlugin implements Plugin<Project> {
 							cpuSetLimit extension.docker.cpuSetLimit
 							cpuSetReservation extension.docker.cpuSetReservation
 						}
+
+						println "No DOCKER_HOST variable defined. Suspending DOCKER RUN plugin."
+					}
 					} else {
-						def networkName = 'ingress'
-						if(extension.docker.networkName) {
-							networkName = extension.docker.networkName
-						}
-						apply plugin : 'com.rico.platform.swarm'
-						println "Service Name - "+extension.docker.serviceName
-						//Applying Swarm service
-                        swarm {
-							name extension.docker.containerName
-							image extension.docker.imageName
-							tag tagName
-							ports portMappingArray
-							network networkName
-							volumes volumeMappings
-							command extension.docker.commands
-							env extension.docker.environment
-							serviceName extension.docker.serviceName
-							swarmMode extension.docker.swarm.swarmMode.name()
-							replicas extension.docker.swarm.replicas
-							rollbackOnUpdateFailure extension.docker.swarm.rollbackOnUpdateFailure
-							memoryLimitInMB extension.docker.memoryLimitInMB
-							memoryReservationInMB extension.docker.memoryReservationInMB
-							cpuSetLimit extension.docker.cpuSetLimit
-							cpuSetReservation extension.docker.cpuSetReservation
+						if (!RoUtils.dockerHost.isEmpty()) {
+							def networkName = 'ingress'
+							if (extension.docker.networkName) {
+								networkName = extension.docker.networkName
+							}
+							apply plugin: 'com.rico.platform.swarm'
+							println "Service Name - " + extension.docker.serviceName
+							//Applying Swarm service
+							swarm {
+								name extension.docker.containerName
+								image extension.docker.imageName
+								tag tagName
+								ports portMappingArray
+								network networkName
+								volumes volumeMappings
+								command extension.docker.commands
+								env extension.docker.environment
+								serviceName extension.docker.serviceName
+								swarmMode extension.docker.swarm.swarmMode.name()
+								replicas extension.docker.swarm.replicas
+								rollbackOnUpdateFailure extension.docker.swarm.rollbackOnUpdateFailure
+								memoryLimitInMB extension.docker.memoryLimitInMB
+								memoryReservationInMB extension.docker.memoryReservationInMB
+								cpuSetLimit extension.docker.cpuSetLimit
+								cpuSetReservation extension.docker.cpuSetReservation
+							}
+						} else {
+							println "No DOCKER_HOST variable defined. Suspending SWARM plugin."
 						}
 					}
 				}

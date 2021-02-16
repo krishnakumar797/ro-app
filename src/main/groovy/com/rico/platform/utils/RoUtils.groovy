@@ -23,5 +23,5 @@ interface RoUtils {
 	String dockerRegistry = System.getenv('DOCKER_REGISTRY') ?: "localhost:5000"
 	String dockerUser = System.getenv('DOCKER_USER') ?: "0"
 	String dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
-	String dockerHost = System.getenv('DOCKER_HOST') ?: "tcp://127.0.0.1:2375"
+	String dockerHost = System.getenv('DOCKER_HOST') ?: ""
 }
