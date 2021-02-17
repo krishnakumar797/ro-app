@@ -148,7 +148,7 @@ class RoCommonPlugin implements Plugin<Project> {
                     }
                     compileOnly "com.sun.activation:jakarta.activation:${RoConstants.jakartaVersion}"
                     compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
-
+                    compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 
                     if (configMap.get("couchbase")) {
                         compileOnly 'org.springframework.data:spring-data-couchbase'

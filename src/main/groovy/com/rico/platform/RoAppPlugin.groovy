@@ -21,7 +21,7 @@ class RoAppPlugin implements Plugin<Project> {
 
 
     final Instantiator instantiator;
-    String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv
+    String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv, dockerRegistry, dockerUser, dockerPassword,dockerHost
     def portNums = []
     def jFlags = []
     def kubeConfigFile
@@ -36,6 +36,11 @@ class RoAppPlugin implements Plugin<Project> {
         dbHost = System.getenv('DB_HOST') ?: "127.0.0.1"
         def kubeConfig = System.getenv('KUBECONFIG')?:'$HOME/.kube/config'
         kubeConfigFile = new File(kubeConfig);
+
+        dockerRegistry = System.getenv('DOCKER_REGISTRY') ?: "localhost:5000"
+        dockerUser = System.getenv('DOCKER_USER') ?: "0"
+        dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
+        dockerHost = System.getenv('DOCKER_HOST') ?: "tcp://127.0.0.1:2375"
     }
 
     void apply(Project project) {
@@ -101,7 +106,7 @@ class RoAppPlugin implements Plugin<Project> {
 
                     apply plugin: 'com.google.cloud.tools.jib'
 
-                    println "Docker Details - User: ${RoConstants.dockerUser} Password:  ${RoConstants.dockerPassword} ImageName: ${RoConstants.dockerRegistry}/${extension.docker.imageName}"
+                    println "Docker Details - ImageName: ${dockerRegistry}/${extension.docker.imageName}"
                     /**
                      Jib containerization
                      **/
@@ -110,11 +115,11 @@ class RoAppPlugin implements Plugin<Project> {
                             image = 'azul/zulu-openjdk-alpine:11.0.7-jre'
                         }
                         to {
-                            image = "${RoConstants.dockerRegistry}/${extension.docker.imageName}"
+                            image = "${dockerRegistry}/${extension.docker.imageName}"
                             tags = [tagName]
                             auth {
-                                username = RoConstants.dockerUser
-                                password = RoConstants.dockerPassword
+                                username = dockerUser
+                                password = dockerPassword
                             }
                         }
                         container {
@@ -370,6 +375,8 @@ class RoAppPlugin implements Plugin<Project> {
                     def propertyFile = file("src/main/resources/projectInfo.properties")
 
                     implementation 'org.springframework.boot:spring-boot-starter'
+                    compileOnly "com.google.code.findbugs:jsr305:3.0.2"
+
 
                     if (extension.javaModule) {
                         moduleInfo = file("src/main/java/module-info.java")
