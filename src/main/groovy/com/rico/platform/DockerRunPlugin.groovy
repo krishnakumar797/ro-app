@@ -32,7 +32,6 @@ import com.github.dockerjava.core.DockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.github.dockerjava.transport.DockerHttpClient
-import com.rico.platform.utils.RoUtils
 
 /**
  * Docker run plugin
@@ -41,26 +40,29 @@ import com.rico.platform.utils.RoUtils
 class DockerRunPlugin implements Plugin<Project> {
 
 	private DockerClient dockerClient
-	private String dockerRegistry
+
+	private String dockerRegistry, dockerUser, dockerPassword, dockerHost
 
 	public DockerRunPlugin() {
 		//Getting system environment variables and configuring the docker client
 		println "Initializing docker config"
-		dockerRegistry = RoUtils.dockerRegistry
-
+		dockerRegistry = System.getenv('DOCKER_REGISTRY') ?: "localhost:5000"
+		dockerUser = System.getenv('DOCKER_USER') ?: "0"
+		dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
+		dockerHost = System.getenv('DOCKER_HOST') ?: ""
 		DockerClientConfig config = null
 
-		if(!RoUtils.dockerUser.contentEquals("0") && !RoUtils.dockerPassword.contentEquals("0")) {
+		if(!dockerUser.contentEquals("0") && !dockerPassword.contentEquals("0")) {
 			config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-					.withDockerHost(RoUtils.dockerHost)
+					.withDockerHost(dockerHost)
 					.withDockerTlsVerify(false)
-					.withRegistryUsername(RoUtils.dockerUser)
-					.withRegistryPassword(RoUtils.dockerPassword)
+					.withRegistryUsername(dockerUser)
+					.withRegistryPassword(dockerPassword)
 					.withRegistryUrl(dockerRegistry)
 					.build();
 		}else {
 			config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-					.withDockerHost(RoUtils.dockerHost)
+					.withDockerHost(dockerHost)
 					.withDockerTlsVerify(false)
 					.withRegistryUrl(dockerRegistry)
 					.build();

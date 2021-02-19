@@ -1,5 +1,7 @@
 package com.rico.platform
 
+import com.github.dockerjava.api.model.AuthConfig
+
 import java.util.Map.Entry
 
 import org.gradle.api.DefaultTask
@@ -38,7 +40,6 @@ import com.github.dockerjava.core.DockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.github.dockerjava.transport.DockerHttpClient
-import com.rico.platform.utils.RoUtils
 
 /**
  * Docker Swarm plugin
@@ -47,26 +48,29 @@ import com.rico.platform.utils.RoUtils
 class SwarmPlugin implements Plugin<Project> {
 
 	private DockerClient dockerClient
-	private String dockerRegistry
+	private String dockerRegistry, dockerUser, dockerPassword, dockerHost
 
 	public SwarmPlugin() {
 		//Getting system environment variables and configuring the docker client
 		println "Initializing swarm config"
-		dockerRegistry = RoUtils.dockerRegistry
+		dockerRegistry = System.getenv('DOCKER_REGISTRY') ?: "localhost:5000"
+		dockerUser = System.getenv('DOCKER_USER') ?: "0"
+		dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
+		dockerHost = System.getenv('DOCKER_HOST') ?: ""
 
 		DockerClientConfig config = null
 
-		if(!RoUtils.dockerUser.contentEquals("0") && !RoUtils.dockerPassword.contentEquals("0")) {
+		if(!dockerUser.contentEquals("0") && !dockerPassword.contentEquals("0")) {
 			config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-					.withDockerHost(RoUtils.dockerHost)
+					.withDockerHost(dockerHost)
 					.withDockerTlsVerify(false)
-					.withRegistryUsername(RoUtils.dockerUser)
-					.withRegistryPassword(RoUtils.dockerPassword)
+					.withRegistryUsername(dockerUser)
+					.withRegistryPassword(dockerPassword)
 					.withRegistryUrl(dockerRegistry)
 					.build();
 		}else {
 			config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-					.withDockerHost(RoUtils.dockerHost)
+					.withDockerHost(dockerHost)
 					.withDockerTlsVerify(false)
 					.withRegistryUrl(dockerRegistry)
 					.build();
@@ -150,14 +154,14 @@ class SwarmPlugin implements Plugin<Project> {
 					args.put("rollbackonUpdateFailure", ext.rollbackOnUpdateFailure?"1":"0")
 					//Adding ports
 					List<PortConfig> pConfigList = new ArrayList()
-					for (int i=0;i<ext.ports.size();i++) {
-						String[] portMapping = ext.ports[i].split(':');
-						PortConfig pConfig = new PortConfig()
-						pConfig = pConfig.withProtocol(PortConfigProtocol.TCP)
-						pConfig = pConfig.withPublishedPort(portMapping[0].toInteger())
-						pConfig = pConfig.withTargetPort(portMapping[1].toInteger())
-						pConfigList.add(pConfig)
-					}
+						for (int i = 0; i < ext.ports.size(); i++) {
+							String[] portMapping = ext.ports[i].split(':');
+							PortConfig pConfig = new PortConfig()
+							pConfig = pConfig.withProtocol(PortConfigProtocol.TCP)
+							pConfig = pConfig.withPublishedPort(portMapping[0].toInteger())
+							pConfig = pConfig.withTargetPort(portMapping[1].toInteger())
+							pConfigList.add(pConfig)
+						}
 					//Adding volumes
 					List<Mount> mountList = new ArrayList<>()
 					for (Entry<String,String> volume : ext.volumes.entrySet()) {
@@ -213,7 +217,7 @@ class SwarmPlugin implements Plugin<Project> {
 
 	/**
 	 * Method to inspect the network
-	 * 
+	 *
 	 * @param networkId
 	 * @param dockerClient
 	 * @return
@@ -225,7 +229,7 @@ class SwarmPlugin implements Plugin<Project> {
 
 	/**
 	 * Method to create and run the docker
-	 *  
+	 *
 	 * @param imageRepository
 	 * @param registry
 	 * @param tag
@@ -280,8 +284,8 @@ class SwarmPlugin implements Plugin<Project> {
 		if(args.get("memoryLimitInMB") != null || args.get("cpuSetLimit") != null) {
 			resourceRequirements.withLimits(resourceSpecsLimits)
 		}
-	
-		ResourceSpecs resourceSpecsReservation = new ResourceSpecs()		
+
+		ResourceSpecs resourceSpecsReservation = new ResourceSpecs()
 		if(args.get("memoryReservationInMB") != null) {
 			resourceSpecsReservation.withMemoryBytes((Long.parseLong(args.get("memoryReservationInMB"))*1000000))
 		}
@@ -340,13 +344,15 @@ class SwarmPlugin implements Plugin<Project> {
 		}
 
 		println "Starting the service "+serviceName
-		CreateServiceResponse serviceResponse = dockerClient.createServiceCmd(serviceSpec).exec()
+		AuthConfig authConfig = new AuthConfig()
+		authConfig = authConfig.withUsername(dockerUser).withPassword(dockerPassword).withRegistryAddress(dockerRegistry)
+		CreateServiceResponse serviceResponse = dockerClient.createServiceCmd(serviceSpec).withAuthConfig(authConfig).exec()
 
 	}
 
 	/**
 	 * Method to remove a Service
-	 * 
+	 *
 	 * @param serviceId
 	 * @param dockerClient
 	 * @return

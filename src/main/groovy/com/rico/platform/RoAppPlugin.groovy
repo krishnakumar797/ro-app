@@ -18,7 +18,7 @@ class RoAppPlugin implements Plugin<Project> {
 
 
 	final Instantiator instantiator;
-	String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv
+	String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv, dockerRegistry, dockerUser, dockerPassword, dockerHost
 	def portNums = []
     def jFlags = []
 
@@ -29,7 +29,11 @@ class RoAppPlugin implements Plugin<Project> {
 		debugPortNumber = System.getenv('DEBUG_PORT') ?: "8888"
 		grpcPortNumber = System.getenv('GRPC_PORT') ?: "8090"
 		tagName = System.getenv('TAG_NAME') ?: "latest"
-		dbHost = System.getenv('DB_HOST') ?: "127.0.0.1"
+		dbHost = System.getenv('DB_HOST') ?: "127.0.0.1"	//Environment variables
+	    dockerRegistry = System.getenv('DOCKER_REGISTRY') ?: "localhost:5000"
+	    dockerUser = System.getenv('DOCKER_USER') ?: "0"
+	    dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
+	    dockerHost = System.getenv('DOCKER_HOST') ?: ""
 	}
 
 	void apply(Project project) {
@@ -43,7 +47,7 @@ class RoAppPlugin implements Plugin<Project> {
 			jFlags = ['-Xms256m', '-agentlib:jdwp=transport=dt_socket,address=0.0.0.0:'+debugPortNumber+',server=y,suspend=n', '-Dspring.profiles.active=local', '-Dspring.devtools.restart.enabled=false']
 			portNums.add(debugPortNumber)
 		} else {
-			jFlags = ['-Xms256m', '-Dspring.devtools.restart.enabled=false', '-Dspring.profiles.active=${buildEnv}']
+			jFlags = ['-Xms256m', '-Dspring.devtools.restart.enabled=false', '-Dspring.profiles.active='+buildEnv]
 		}
 
 		def date = new Date()
@@ -57,7 +61,7 @@ class RoAppPlugin implements Plugin<Project> {
 
 					apply plugin: 'com.google.cloud.tools.jib'
 
-					println "Docker Details - User: ${RoUtils.dockerUser} Password:  ${RoUtils.dockerPassword} ImageName: ${RoUtils.dockerRegistry}/${extension.docker.imageName}"
+					println "Docker Details - ImageName: ${dockerRegistry}/${extension.docker.imageName}"
 					/**
 					 Jib containerization
 					 **/
@@ -66,11 +70,11 @@ class RoAppPlugin implements Plugin<Project> {
 							image = 'openjdk:8u212-jre-alpine'
 						}
 						to {
-							image = "${RoUtils.dockerRegistry}/${extension.docker.imageName}"
+							image = "${dockerRegistry}/${extension.docker.imageName}"
 							tags = [tagName]
 							auth {
-								username = RoUtils.dockerUser
-								password = RoUtils.dockerPassword
+								username = dockerUser
+								password = dockerPassword
 							}
 						}
 						container {
@@ -102,6 +106,8 @@ class RoAppPlugin implements Plugin<Project> {
 					}
 
 					extension.docker.environment.put('DB_HOST', dbHost)
+					extension.docker.environment.put('REST_PORT', restPortNumber)
+
 
 					if(extension.docker.environment.size() !=0) {
 						println "Environment - ${extension.docker.environment}"
@@ -115,7 +121,7 @@ class RoAppPlugin implements Plugin<Project> {
 					
 
 					if(extension.docker.swarm == null) {
-						if (!RoUtils.dockerHost.isEmpty()) {
+						if (!dockerHost.isEmpty()) {
 						def networkName = 'bridge'
 						if (extension.docker.networkName) {
 							networkName = extension.docker.networkName
@@ -126,7 +132,9 @@ class RoAppPlugin implements Plugin<Project> {
 							name extension.docker.containerName
 							image extension.docker.imageName
 							tag tagName
-							ports portMappingArray
+							if(!portMappings.isEmpty()){
+								ports portMappingArray
+							}
 							network networkName
 							volumes volumeMappings
 							command extension.docker.commands
@@ -140,7 +148,7 @@ class RoAppPlugin implements Plugin<Project> {
 						println "No DOCKER_HOST variable defined. Suspending DOCKER RUN plugin."
 					}
 					} else {
-						if (!RoUtils.dockerHost.isEmpty()) {
+						if (!dockerHost.isEmpty()) {
 							def networkName = 'ingress'
 							if (extension.docker.networkName) {
 								networkName = extension.docker.networkName
@@ -152,7 +160,9 @@ class RoAppPlugin implements Plugin<Project> {
 								name extension.docker.containerName
 								image extension.docker.imageName
 								tag tagName
-								ports portMappingArray
+								if(!portMappings.isEmpty()){
+									ports portMappingArray
+								}
 								network networkName
 								volumes volumeMappings
 								command extension.docker.commands
@@ -199,6 +209,7 @@ class RoAppPlugin implements Plugin<Project> {
 					}
 					if(extension.monitoring == 'y'){
 						implementation 'org.springframework.boot:spring-boot-starter-actuator'
+						props.setProperty("management.endpoints.web.exposure.include","health,metrics")
 					}
 					if(extension.devTools == 'y'){
 						developmentOnly 'org.springframework.boot:spring-boot-devtools'
