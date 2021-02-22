@@ -7,7 +7,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.internal.reflect.Instantiator
 
-import com.rico.platform.utils.RoUtils
+import com.rico.platform.utils.RoConstants
 /**
  * Custom ro plugin for dependency managment and tools integration
  * 
@@ -198,8 +198,8 @@ class RoAppPlugin implements Plugin<Project> {
 					// JUnit testing
 					testImplementation ("org.mockito:mockito-core:3.4.0")
 					testImplementation 'org.mockito:mockito-inline:3.4.6'
-					testImplementation ("org.junit.jupiter:junit-jupiter-api:${RoUtils.junitTestVersion}")
-					testRuntimeOnly ("org.junit.jupiter:junit-jupiter-engine:${RoUtils.junitTestVersion}")
+					testImplementation ("org.junit.jupiter:junit-jupiter-api:${RoConstants.junitTestVersion}")
+					testRuntimeOnly ("org.junit.jupiter:junit-jupiter-engine:${RoConstants.junitTestVersion}")
 					testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.5.2")
 
 
@@ -215,7 +215,7 @@ class RoAppPlugin implements Plugin<Project> {
 						developmentOnly 'org.springframework.boot:spring-boot-devtools'
 					}
 					if(extension.rest == 'y'){
-						runtimeOnly "org.modelmapper:modelmapper:${RoUtils.modelMapperVersion}"
+						runtimeOnly "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
 						implementation 'org.springframework.boot:spring-boot-starter-web'
 						props.setProperty('spring.mvc.throw-exception-if-no-handler-found', 'true')
 						if(extension.security != 'y'){
@@ -243,48 +243,48 @@ class RoAppPlugin implements Plugin<Project> {
 						runtimeOnly 'io.lettuce:lettuce-core'
 					}
 					if(extension.cache == 'y') {
-						runtimeOnly "com.hazelcast:hazelcast:${RoUtils.hazelcastVersion}"
-						runtimeOnly "com.hazelcast:hazelcast-spring:${RoUtils.hazelcastVersion}"
+						runtimeOnly "com.hazelcast:hazelcast:${RoConstants.hazelcastVersion}"
+						runtimeOnly "com.hazelcast:hazelcast-spring:${RoConstants.hazelcastVersion}"
 						props.setProperty("cache.enabled", 'y')
 					}
 					if(extension.queue == 'y') {
 						implementation 'org.springframework.kafka:spring-kafka'
-						runtimeOnly "com.google.protobuf:protobuf-java:${RoUtils.protobufVersion}"
+						runtimeOnly "com.google.protobuf:protobuf-java:${RoConstants.protobufVersion}"
 						runtimeOnly 'de.ruedigermoeller:fst:2.56'
 					}
 					// For both grpc server and grpc client
 					if(extension.grpc == 'y') {
-						testImplementation("io.grpc:grpc-testing:${RoUtils.grpcUnitTestVersion}")
+						testImplementation("io.grpc:grpc-testing:${RoConstants.grpcUnitTestVersion}")
 						if(extension.rest != 'y'){
 							runtimeOnly 'jakarta.validation:jakarta.validation-api'
 						}
-						implementation "net.devh:grpc-spring-boot-starter:${RoUtils.grpcVersion}"
+						implementation "net.devh:grpc-spring-boot-starter:${RoConstants.grpcVersion}"
 
 						portNums.add(grpcPortNumber)
 
 					}else if(extension.grpcServer == 'y') {
-						testImplementation("io.grpc:grpc-testing:${RoUtils.grpcUnitTestVersion}")
+						testImplementation("io.grpc:grpc-testing:${RoConstants.grpcUnitTestVersion}")
 						// For grpc server
 						if(extension.rest != 'y'){
 							runtimeOnly 'jakarta.validation:jakarta.validation-api'
 						}
-						implementation "net.devh:grpc-server-spring-boot-starter:${RoUtils.grpcVersion}"
-						runtimeOnly "io.grpc:grpc-stub:${RoUtils.protocJavaVersion}"
+						implementation "net.devh:grpc-server-spring-boot-starter:${RoConstants.grpcVersion}"
+						runtimeOnly "io.grpc:grpc-stub:${RoConstants.protocJavaVersion}"
 
 						portNums.add(grpcPortNumber)
 
 					}else if(extension.grpcClient == 'y') {
-						testImplementation("io.grpc:grpc-testing:${RoUtils.grpcUnitTestVersion}")
+						testImplementation("io.grpc:grpc-testing:${RoConstants.grpcUnitTestVersion}")
 						// For grpc client
-						implementation "net.devh:grpc-client-spring-boot-starter:${RoUtils.grpcVersion}"
+						implementation "net.devh:grpc-client-spring-boot-starter:${RoConstants.grpcVersion}"
 					}
 
 					if(extension.grpc == 'y' || extension.grpcClient == 'y') {
-						implementation "io.grpc:grpc-stub:${RoUtils.protocJavaVersion}"
+						implementation "io.grpc:grpc-stub:${RoConstants.protocJavaVersion}"
 					}
 					if(extension.grpc == 'y' || extension.grpcServer == 'y' || extension.grpcClient == 'y') {
-						runtimeOnly "io.grpc:grpc-protobuf:${RoUtils.protocJavaVersion}"
-						runtimeOnly "io.grpc:grpc-netty-shaded:${RoUtils.protocJavaVersion}"
+						runtimeOnly "io.grpc:grpc-protobuf:${RoConstants.protocJavaVersion}"
+						runtimeOnly "io.grpc:grpc-netty-shaded:${RoConstants.protocJavaVersion}"
 					}
 
 					if(extension.persistence == 'springData') {
@@ -293,10 +293,10 @@ class RoAppPlugin implements Plugin<Project> {
 					}
 
 					if(extension.persistence == 'hibernate') {
-						implementation "org.springframework:spring-tx:${RoUtils.springVersion}"
+						implementation "org.springframework:spring-tx:${RoConstants.springVersion}"
 						runtimeOnly 'org.springframework.data:spring-data-jpa'
-						runtimeOnly "org.springframework:spring-aspects:${RoUtils.springVersion}"
-						runtimeOnly "org.springframework:spring-orm:${RoUtils.springVersion}"
+						runtimeOnly "org.springframework:spring-aspects:${RoConstants.springVersion}"
+						runtimeOnly "org.springframework:spring-orm:${RoConstants.springVersion}"
 						runtimeOnly 'org.hibernate:hibernate-core'
 						runtimeOnly 'com.zaxxer:HikariCP'
 

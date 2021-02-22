@@ -6,7 +6,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.internal.reflect.Instantiator
 
-import com.rico.platform.utils.RoUtils
+import com.rico.platform.utils.RoConstants
 /**
  * Common ro plugin for dependency managment
  * 
@@ -36,12 +36,12 @@ class RoCommonPlugin implements Plugin<Project> {
 					compileOnly 'org.springframework.kafka:spring-kafka'
 
 					compileOnly 'org.springframework.data:spring-data-redis'
-					compileOnly "com.google.protobuf:protobuf-java:${RoUtils.protobufVersion}"
+					compileOnly "com.google.protobuf:protobuf-java:${RoConstants.protobufVersion}"
 
-					compileOnly "net.devh:grpc-spring-boot-starter:${RoUtils.grpcVersion}"
-					compileOnly "io.grpc:grpc-protobuf:${RoUtils.protocJavaVersion}"
-					compileOnly "io.grpc:grpc-stub:${RoUtils.protocJavaVersion}"
-					compileOnly "io.grpc:grpc-netty-shaded:${RoUtils.protocJavaVersion}"
+					compileOnly "net.devh:grpc-spring-boot-starter:${RoConstants.grpcVersion}"
+					compileOnly "io.grpc:grpc-protobuf:${RoConstants.protocJavaVersion}"
+					compileOnly "io.grpc:grpc-stub:${RoConstants.protocJavaVersion}"
+					compileOnly "io.grpc:grpc-netty-shaded:${RoConstants.protocJavaVersion}"
 
 					compileOnly 'io.lettuce:lettuce-core'
 					compileOnly 'de.ruedigermoeller:fst:2.56'
@@ -56,17 +56,17 @@ class RoCommonPlugin implements Plugin<Project> {
 					compileOnly 'org.postgresql:postgresql'
 					compileOnly 'com.zaxxer:HikariCP'
 
-					compileOnly "com.hazelcast:hazelcast:${RoUtils.hazelcastVersion}"
-					compileOnly "com.hazelcast:hazelcast-spring:${RoUtils.hazelcastVersion}"
+					compileOnly "com.hazelcast:hazelcast:${RoConstants.hazelcastVersion}"
+					compileOnly "com.hazelcast:hazelcast-spring:${RoConstants.hazelcastVersion}"
 
 					compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
 					compileOnly 'org.springframework.boot:spring-boot-actuator-autoconfigure'
-					compileOnly "org.modelmapper:modelmapper:${RoUtils.modelMapperVersion}"
+					compileOnly "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
 					compileOnly 'org.springframework:spring-webmvc'
 					compileOnly 'jakarta.validation:jakarta.validation-api'
-					compileOnly "javax.servlet:servlet-api:${RoUtils.servletApiVersin}"
+					compileOnly "javax.servlet:servlet-api:${RoConstants.servletApiVersin}"
 
-					implementation "org.javassist:javassist:${RoUtils.javaAssistVersion}"
+					implementation "org.javassist:javassist:${RoConstants.javaAssistVersion}"
 				}
 			}
 		}
