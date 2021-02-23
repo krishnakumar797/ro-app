@@ -195,6 +195,9 @@ class DockerRunExtension {
 	}
 
 	private static void checkPortIsValid(String port) {
+		if(port == null || port.isEmpty()){
+			return
+		}
 		int val = Integer.parseInt(port)
 		Preconditions.checkArgument(0 < val && val <= 65536, "Port must be in the range [1,65536]")
 	}

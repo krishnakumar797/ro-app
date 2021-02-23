@@ -21,7 +21,7 @@ class RoAppPlugin implements Plugin<Project> {
 
 
     final Instantiator instantiator;
-    String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv
+    String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv, dockerRegistry, dockerUser, dockerPassword, dockerHost
     def portNums = []
     def jFlags = []
     def kubeConfigFile
@@ -34,6 +34,10 @@ class RoAppPlugin implements Plugin<Project> {
         grpcPortNumber = System.getenv('GRPC_PORT') ?: "8090"
         tagName = System.getenv('TAG_NAME') ?: "latest"
         dbHost = System.getenv('DB_HOST') ?: "127.0.0.1"
+        dockerRegistry = System.getenv('DOCKER_REGISTRY') ?: "localhost:5000"
+        dockerUser = System.getenv('DOCKER_USER') ?: "0"
+        dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
+        dockerHost = System.getenv('DOCKER_HOST') ?: ""
         def kubeConfig = System.getenv('KUBECONFIG')?:'$HOME/.kube/config'
         kubeConfigFile = new File(kubeConfig);
     }
@@ -56,7 +60,7 @@ class RoAppPlugin implements Plugin<Project> {
             jFlags = ['-Xms256m', '-agentlib:jdwp=transport=dt_socket,address=0.0.0.0:' + debugPortNumber + ',server=y,suspend=n', '-Dspring.profiles.active=local', '-Dspring.devtools.restart.enabled=false']
             portNums.add(debugPortNumber)
         } else {
-            jFlags = ['-Xms256m', '-Dspring.devtools.restart.enabled=false', '-Dspring.profiles.active=${buildEnv}']
+            jFlags = ['-Xms256m', '-Dspring.devtools.restart.enabled=false', '-Dspring.profiles.active='+buildEnv]
         }
 
         def date = new Date()
@@ -101,7 +105,7 @@ class RoAppPlugin implements Plugin<Project> {
 
                     apply plugin: 'com.google.cloud.tools.jib'
 
-                    println "Docker Details - User: ${RoConstants.dockerUser} Password:  ${RoConstants.dockerPassword} ImageName: ${RoConstants.dockerRegistry}/${extension.docker.imageName}"
+                    println "Docker Details - ImageName: ${dockerRegistry}/${extension.docker.imageName}"
                     /**
                      Jib containerization
                      **/
@@ -110,11 +114,11 @@ class RoAppPlugin implements Plugin<Project> {
                             image = 'azul/zulu-openjdk-alpine:11.0.7-jre'
                         }
                         to {
-                            image = "${RoConstants.dockerRegistry}/${extension.docker.imageName}"
+                            image = "${dockerRegistry}/${extension.docker.imageName}"
                             tags = [tagName]
                             auth {
-                                username = RoConstants.dockerUser
-                                password = RoConstants.dockerPassword
+                                username = dockerUser
+                                password = dockerPassword
                             }
                         }
                         container {
@@ -148,6 +152,7 @@ class RoAppPlugin implements Plugin<Project> {
 
 
                     extension.docker.environment.put('DB_HOST', dbHost)
+                    extension.docker.environment.put('REST_PORT', restPortNumber)
 
                     if (extension.docker.environment.size() != 0) {
                         println "Environment - ${extension.docker.environment}"
@@ -165,49 +170,57 @@ class RoAppPlugin implements Plugin<Project> {
                         if (extension.docker.networkName) {
                             networkName = extension.docker.networkName
                         }
-                        apply plugin: 'com.rico.platform.dockerRun'
-                        //Applying docker run
-                        dockerRun {
-                            name extension.docker.containerName
-                            image extension.docker.imageName
-                            tag tagName
-                            if(portMappingArray.length != 0) {
-                                ports portMappingArray
+                        if (!dockerHost.isEmpty()) {
+                            apply plugin: 'com.rico.platform.dockerRun'
+                            //Applying docker run
+                            dockerRun {
+                                name extension.docker.containerName
+                                image extension.docker.imageName
+                                tag tagName
+                                if (portMappingArray.length != 0) {
+                                    ports portMappingArray
+                                }
+                                network networkName
+                                volumes volumeMappings
+                                command extension.docker.commands
+                                env extension.docker.environment
+                                memoryLimitInMB extension.docker.memoryLimitInMB
+                                memoryReservationInMB extension.docker.memoryReservationInMB
+                                cpuSetLimit extension.docker.cpuSetLimit
+                                cpuSetReservation extension.docker.cpuSetReservation
                             }
-                            network networkName
-                            volumes volumeMappings
-                            command extension.docker.commands
-                            env extension.docker.environment
-                            memoryLimitInMB extension.docker.memoryLimitInMB
-                            memoryReservationInMB extension.docker.memoryReservationInMB
-                            cpuSetLimit extension.docker.cpuSetLimit
-                            cpuSetReservation extension.docker.cpuSetReservation
+                        } else {
+                            println "No DOCKER_HOST variable defined. Suspending DOCKER RUN plugin."
                         }
                     } else if(extension.docker.swarm != null) {
                         def networkName = 'ingress'
                         if (extension.docker.networkName) {
                             networkName = extension.docker.networkName
                         }
-                        apply plugin: 'com.rico.platform.swarm'
-                        println "Service Name - " + extension.docker.serviceName
-                        //Applying Swarm service
-                        swarm {
-                            name extension.docker.containerName
-                            image extension.docker.imageName
-                            tag tagName
-                            ports portMappingArray
-                            network networkName
-                            volumes volumeMappings
-                            command extension.docker.commands
-                            env extension.docker.environment
-                            serviceName extension.docker.serviceName
-                            swarmMode extension.docker.swarm.swarmMode.name()
-                            replicas extension.docker.swarm.replicas
-                            rollbackOnUpdateFailure extension.docker.swarm.rollbackOnUpdateFailure
-                            memoryLimitInMB extension.docker.memoryLimitInMB
-                            memoryReservationInMB extension.docker.memoryReservationInMB
-                            cpuSetLimit extension.docker.cpuSetLimit
-                            cpuSetReservation extension.docker.cpuSetReservation
+                        if (!dockerHost.isEmpty()) {
+                            apply plugin: 'com.rico.platform.swarm'
+                            println "Service Name - " + extension.docker.serviceName
+                            //Applying Swarm service
+                            swarm {
+                                name extension.docker.containerName
+                                image extension.docker.imageName
+                                tag tagName
+                                ports portMappingArray
+                                network networkName
+                                volumes volumeMappings
+                                command extension.docker.commands
+                                env extension.docker.environment
+                                serviceName extension.docker.serviceName
+                                swarmMode extension.docker.swarm.swarmMode.name()
+                                replicas extension.docker.swarm.replicas
+                                rollbackOnUpdateFailure extension.docker.swarm.rollbackOnUpdateFailure
+                                memoryLimitInMB extension.docker.memoryLimitInMB
+                                memoryReservationInMB extension.docker.memoryReservationInMB
+                                cpuSetLimit extension.docker.cpuSetLimit
+                                cpuSetReservation extension.docker.cpuSetReservation
+                            }
+                        }else {
+                            println "No DOCKER_HOST variable defined. Suspending SWARM plugin."
                         }
                     }
 

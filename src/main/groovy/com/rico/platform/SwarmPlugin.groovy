@@ -1,5 +1,7 @@
 package com.rico.platform
 
+import com.github.dockerjava.api.model.AuthConfig
+
 import java.util.Map.Entry
 
 import org.gradle.api.DefaultTask
@@ -47,26 +49,29 @@ import com.rico.platform.utils.RoConstants
 class SwarmPlugin implements Plugin<Project> {
 
 	private DockerClient dockerClient
-	private String dockerRegistry
+	private String dockerRegistry, dockerUser, dockerPassword, dockerHost
 
 	public SwarmPlugin() {
 		//Getting system environment variables and configuring the docker client
 		println "Initializing swarm config"
-		dockerRegistry = RoConstants.dockerRegistry
+		dockerRegistry = System.getenv('DOCKER_REGISTRY') ?: "localhost:5000"
+		dockerUser = System.getenv('DOCKER_USER') ?: "0"
+		dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
+		dockerHost = System.getenv('DOCKER_HOST') ?: ""
 
 		DockerClientConfig config = null
 
-		if(!RoConstants.dockerUser.contentEquals("0") && !RoConstants.dockerPassword.contentEquals("0")) {
+		if(!dockerUser.contentEquals("0") && !dockerPassword.contentEquals("0")) {
 			config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-					.withDockerHost(RoConstants.dockerHost)
+					.withDockerHost(dockerHost)
 					.withDockerTlsVerify(false)
-					.withRegistryUsername(RoConstants.dockerUser)
-					.withRegistryPassword(RoConstants.dockerPassword)
+					.withRegistryUsername(dockerUser)
+					.withRegistryPassword(dockerPassword)
 					.withRegistryUrl(dockerRegistry)
 					.build();
 		}else {
 			config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-					.withDockerHost(RoConstants.dockerHost)
+					.withDockerHost(dockerHost)
 					.withDockerTlsVerify(false)
 					.withRegistryUrl(dockerRegistry)
 					.build();
@@ -340,7 +345,9 @@ class SwarmPlugin implements Plugin<Project> {
 		}
 
 		println "Starting the service "+serviceName
-		CreateServiceResponse serviceResponse = dockerClient.createServiceCmd(serviceSpec).exec()
+		AuthConfig authConfig = new AuthConfig()
+		authConfig = authConfig.withUsername(dockerUser).withPassword(dockerPassword).withRegistryAddress(dockerRegistry)
+		CreateServiceResponse serviceResponse = dockerClient.createServiceCmd(serviceSpec).withAuthConfig(authConfig).exec()
 
 	}
 
