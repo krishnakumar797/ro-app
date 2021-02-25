@@ -39,6 +39,10 @@ class ROExtension {
 			String volumeName, containerPath
 		}
 
+		static class HostVolumeMapping {
+			String hostPath, containerPath
+		}
+
 		enum SwarmMode {
 			REPLICATED, GLOBAL
 		}
@@ -58,6 +62,7 @@ class ROExtension {
 		Double cpuSetLimit, cpuSetReservation
 		HostPortMapping hostPortMapping
 		VolumeMapping volumeMapping
+		HostVolumeMapping hostVolumeMapping
 		Swarm swarm
 		Map<String, String> environment = new HashMap<>()
 		List<String> commands = new ArrayList<>()
@@ -77,6 +82,12 @@ class ROExtension {
 			def volumeMapping = new VolumeMapping()
 			this.project.configure(volumeMapping, closure)
 			this.volumeMapping = volumeMapping
+		}
+
+		void hostVolumeMapping(Closure closure) {
+			def hostVolumeMapping = new HostVolumeMapping()
+			this.project.configure(hostVolumeMapping, closure)
+			this.hostVolumeMapping = hostVolumeMapping
 		}
 
 		void swarm(Closure closure) {

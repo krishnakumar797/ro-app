@@ -30,6 +30,7 @@ class DockerRunExtension {
 	private List<String> arguments = ImmutableList.of()
 	private List<String> command = ImmutableList.of()
 	private Map<String,String> volumes = ImmutableMap.of()
+	private Map<String,String> hostVolumes = ImmutableMap.of()
 	private boolean clean = false
 
 	public String getName() {
@@ -107,6 +108,14 @@ class DockerRunExtension {
 
 	public Map<Object,String> getVolumes() {
 		return volumes
+	}
+
+	void setHostVolumes(Map<String, String> hostVolumes) {
+		this.hostVolumes = hostVolumes
+	}
+
+	public Map<Object,String> getHostVolumes() {
+		return hostVolumes
 	}
 
 	public void command(List<String> command) {

@@ -118,6 +118,13 @@ class RoAppPlugin implements Plugin<Project> {
 							volumeMappings.put(extension.docker.volumeMapping.volumeName, extension.docker.volumeMapping.containerPath)
 						}
 					}
+
+					def hostVolumeMappings = [:]
+					if(extension.docker.hostVolumeMapping){
+						if(extension.docker.hostVolumeMapping.hostPath && extension.docker.hostVolumeMapping.containerPath){
+							hostVolumeMappings.put(extension.docker.hostVolumeMapping.hostPath, extension.docker.hostVolumeMapping.containerPath)
+						}
+					}
 					
 
 					if(extension.docker.swarm == null) {
@@ -137,6 +144,7 @@ class RoAppPlugin implements Plugin<Project> {
 							}
 							network networkName
 							volumes volumeMappings
+							hostVolumes hostVolumeMappings
 							command extension.docker.commands
 							env extension.docker.environment
 							memoryLimitInMB extension.docker.memoryLimitInMB
@@ -144,9 +152,9 @@ class RoAppPlugin implements Plugin<Project> {
 							cpuSetLimit extension.docker.cpuSetLimit
 							cpuSetReservation extension.docker.cpuSetReservation
 						}
-
-						println "No DOCKER_HOST variable defined. Suspending DOCKER RUN plugin."
-					}
+					} else {
+                            println "No DOCKER_HOST variable defined. Suspending DOCKER RUN plugin."
+                        }
 					} else {
 						if (!dockerHost.isEmpty()) {
 							def networkName = 'ingress'
@@ -165,6 +173,7 @@ class RoAppPlugin implements Plugin<Project> {
 								}
 								network networkName
 								volumes volumeMappings
+								hostVolumes hostVolumeMappings
 								command extension.docker.commands
 								env extension.docker.environment
 								serviceName extension.docker.serviceName
