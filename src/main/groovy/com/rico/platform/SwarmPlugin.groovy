@@ -171,6 +171,15 @@ class SwarmPlugin implements Plugin<Project> {
 						mount.withSource(volume.getKey()).withTarget(volume.getValue())
 						mountList.add(mount)
 					}
+
+					//Adding Host path volume
+					for (Entry<String,String> volume : ext.hostVolumes.entrySet()) {
+						Mount mount = new Mount();
+						mount.withType(MountType.BIND)
+						mount.withSource(volume.getKey()).withTarget(volume.getValue())
+						mountList.add(mount)
+					}
+
 					//Adding environments
 					final List<String> envs = new ArrayList<>(ext.env.size());
 					for (Entry<String,String> env : ext.env.entrySet()) {

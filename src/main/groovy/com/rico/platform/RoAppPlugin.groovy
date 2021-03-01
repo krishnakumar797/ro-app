@@ -163,7 +163,12 @@ class RoAppPlugin implements Plugin<Project> {
                             volumeMappings.put(extension.docker.volumeMapping.volumeName, extension.docker.volumeMapping.containerPath)
                         }
                     }
-
+                    def hostVolumeMappings = [:]
+					if(extension.docker.hostVolumeMapping){
+						if(extension.docker.hostVolumeMapping.hostPath && extension.docker.hostVolumeMapping.containerPath){
+							hostVolumeMappings.put(extension.docker.hostVolumeMapping.hostPath, extension.docker.hostVolumeMapping.containerPath)
+						}
+					}
 
                     if (extension.docker.swarm == null && extension.docker.helmChart == null) {
                         def networkName = 'bridge'
@@ -208,6 +213,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 ports portMappingArray
                                 network networkName
                                 volumes volumeMappings
+                                hostVolumes hostVolumeMappings
                                 command extension.docker.commands
                                 env extension.docker.environment
                                 serviceName extension.docker.serviceName
