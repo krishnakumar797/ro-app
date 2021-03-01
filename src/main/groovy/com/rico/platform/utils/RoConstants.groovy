@@ -15,7 +15,7 @@ interface RoConstants {
 	def hazelcastVersion = "4.0.2"
 	def servletApiVersin = "2.5"
 	def modelMapperVersion = "2.3.5"
-	def junitTestVersion = "5.5.2"
+	def junitTestVersion = "5.7.0"
 	def grpcUnitTestVersion = "1.32.1"
 	def javaAssistVersion = "3.27.0-GA"
 	def jakartaVersion = "2.0.0"
