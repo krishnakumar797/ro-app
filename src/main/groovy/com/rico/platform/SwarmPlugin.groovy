@@ -58,6 +58,8 @@ class SwarmPlugin implements Plugin<Project> {
 		dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
 		dockerHost = System.getenv('DOCKER_HOST') ?: ""
 
+
+
 		DockerClientConfig config = null
 
 		if(!dockerUser.contentEquals("0") && !dockerPassword.contentEquals("0")) {
