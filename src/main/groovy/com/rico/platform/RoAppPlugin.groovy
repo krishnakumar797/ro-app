@@ -459,6 +459,7 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                     if (extension.monitoring == 'y') {
                         implementation 'org.springframework.boot:spring-boot-starter-actuator'
+                        props.setProperty("management.endpoints.web.exposure.include","health,metrics")
                     }
                     if (extension.devTools == 'y') {
                         developmentOnly 'org.springframework.boot:spring-boot-devtools'
