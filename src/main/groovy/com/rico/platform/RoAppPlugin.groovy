@@ -247,7 +247,7 @@ class RoAppPlugin implements Plugin<Project> {
                         if(valuesYaml.exists()){
                             try {
                                 def engine = new groovy.text.SimpleTemplateEngine()
-                                binding.put('imageName', jib.to.image);
+                                binding.put('imageName', jib.to.image+":"+jib.to.tags.first());
                                 binding.put('imageTag', jib.to.tags.first());
                                 binding.put('buildEnv', buildEnv);
                                 binding.put('restPort', restPortNumber);
