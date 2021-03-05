@@ -11,7 +11,7 @@ plugins {
 }
 
 group = 'com.rico'
-version = '3.2'
+version = '3.3'
 
 idea {
 	module {
@@ -70,7 +70,7 @@ publishing {
 		 from components.java
 		 groupId 'com.rico.platform'
 		 artifactId 'ro-app'
-		 version '3.2'
+		 version '3.3'
 	  }
 	}
 }
