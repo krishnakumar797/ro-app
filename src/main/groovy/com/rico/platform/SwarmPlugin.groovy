@@ -1,6 +1,7 @@
 package com.rico.platform
 
 import com.github.dockerjava.api.model.AuthConfig
+import com.github.dockerjava.api.model.ContainerDNSConfig
 
 import java.util.Map.Entry
 
@@ -193,7 +194,7 @@ class SwarmPlugin implements Plugin<Project> {
 
 					println "Image Name - "+ext.image
 					//Creating and starting docker container
-					this.execCreateAndRun(this.dockerRegistry+"/"+ext.image, ext.tag, ext.serviceName, args, pConfigList, mountList, envs, ext.command, dockerClient)
+					this.execCreateAndRun(this.dockerRegistry+"/"+ext.image, ext.tag, ext.serviceName, args, pConfigList, mountList, envs, ext.command, ext.dnsNameServers, dockerClient)
 				}
 			}
 
@@ -249,7 +250,7 @@ class SwarmPlugin implements Plugin<Project> {
 	 * @param commands
 	 */
 	private void execCreateAndRun(String imageRepository, String tag, String serviceName, Map<String,String> args, List<PortConfig> pConfigList,
-			List<Mount> mountList, List<String> envs, List<String> commandList, DockerClient dockerClient) {
+			List<Mount> mountList, List<String> envs, List<String> commandList, List<String> dnsList, DockerClient dockerClient) {
 		//Pulling docker image
 		ByteArrayOutputStream bos = new ByteArrayOutputStream()
 		ResultCallback.Adapter<PullResponseItem> resultCallback = new PullImageResultCallback() {
@@ -274,6 +275,12 @@ class SwarmPlugin implements Plugin<Project> {
 		}
 		if(!commandList.isEmpty()) {
 			containerSpec = containerSpec.withCommand(commandList)
+		}
+		//Attaching dns
+		if(!dnsList.isEmpty()) {
+			ContainerDNSConfig dnsConfig = new ContainerDNSConfig()
+			dnsConfig.withNameservers(dnsList)
+			containerSpec.withDnsConfig(dnsConfig)
 		}
 
 		//Creating service
@@ -353,6 +360,8 @@ class SwarmPlugin implements Plugin<Project> {
 			endpoint.withPorts(pConfigList)
 			serviceSpec.withEndpointSpec(endpoint)
 		}
+
+
 
 		println "Starting the service "+serviceName
 		AuthConfig authConfig = new AuthConfig()

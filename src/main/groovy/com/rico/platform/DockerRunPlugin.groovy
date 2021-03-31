@@ -178,7 +178,7 @@ class DockerRunPlugin implements Plugin<Project> {
 
 					println "Image Name - "+ext.image
 					//Creating and starting docker container
-					this.execCreateAndRun(this.dockerRegistry+"/"+ext.image, ext.tag, ext.name, args, exposedPortArray, portBindings, mountList, envs, ext.command, dockerClient)
+					this.execCreateAndRun(this.dockerRegistry+"/"+ext.image, ext.tag, ext.name, args, exposedPortArray, portBindings, mountList, envs, ext.command, ext.dnsNameServers, dockerClient)
 				}
 			}
 
@@ -234,7 +234,7 @@ class DockerRunPlugin implements Plugin<Project> {
 	 * @param commands
 	 */
 	private void execCreateAndRun(String imageRepository, String tag, String name, Map<String,String> args, ExposedPort[] exposedPortArray, Ports portBindings,
-			List<Mount> mountList, List<String> envs, List<String> commandList, DockerClient dockerClient) {
+			List<Mount> mountList, List<String> envs, List<String> commandList, List<String> dnsList, DockerClient dockerClient) {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream()
 		ResultCallback.Adapter<PullResponseItem> resultCallback = new PullImageResultCallback() {
 					@Override
@@ -263,7 +263,9 @@ class DockerRunPlugin implements Plugin<Project> {
 		if(args.get("memoryReservationInMB") != null) {
 			hc.withMemoryReservation((Long.parseLong(args.get("memoryReservationInMB"))*1000000))
 		}
-		
+		if(!dnsList.isEmpty()){
+			hc.withDns(dnsList)
+		}
 		if(exposedPortArray.length >0) {
 			containerCmd = containerCmd.withExposedPorts(exposedPortArray)
 		}
@@ -279,6 +281,7 @@ class DockerRunPlugin implements Plugin<Project> {
 		if(!commandList.isEmpty()) {
 			containerCmd = containerCmd.withCmd(commandList)
 		}
+
 		//Setting restart policy
 		hc = hc.withRestartPolicy(RestartPolicy.alwaysRestart())
 		println "Starting the container "+name

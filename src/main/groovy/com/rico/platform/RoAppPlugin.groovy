@@ -146,6 +146,7 @@ class RoAppPlugin implements Plugin<Project> {
 							volumes volumeMappings
 							hostVolumes hostVolumeMappings
 							command extension.docker.commands
+							dnsNameServers extension.docker.dns
 							env extension.docker.environment
 							memoryLimitInMB extension.docker.memoryLimitInMB
 							memoryReservationInMB extension.docker.memoryReservationInMB
@@ -175,6 +176,7 @@ class RoAppPlugin implements Plugin<Project> {
 								volumes volumeMappings
 								hostVolumes hostVolumeMappings
 								command extension.docker.commands
+								dnsNameServers extension.docker.dns
 								env extension.docker.environment
 								serviceName extension.docker.serviceName
 								swarmMode extension.docker.swarm.swarmMode.name()
