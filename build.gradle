@@ -6,28 +6,19 @@ plugins {
 	id 'java-gradle-plugin'
 	id 'groovy'
 	id 'maven-publish'
-	id "com.jfrog.bintray" version "1.8.5"
+	id 'com.gradle.plugin-publish' version '0.12.0'
 }
 
-group = 'com.rico'
+group = 'com.github.rico'
 version = '2.12'
 
-//Publishing to jforg repository
-bintray {
-	user = 'krishnakumar797'
-	key = 'f550904bbae06357b134998288a41f4809fd56eb'
-	pkg {
-		repo = 'rico'
-		name = 'ro-app'
-		userOrg = 'tp'
-		licenses = ['Apache-2.0']
-		vcsUrl = 'https://github.com/krishnakumar797/roapp.git'
-	}
-	publications = ['roapp']
+pluginBundle {
+	website = 'https://github.com/krishnakumar797/ro-app/wiki'
+	vcsUrl = 'https://github.com/krishnakumar797/ro-app'
+	tags = ['config', 'auto']
 }
 
 repositories {
-	jcenter()
 	mavenCentral()
 }
 
@@ -38,19 +29,27 @@ test {
 gradlePlugin {
 	plugins {
 		roAppPlugin {
-			id = 'com.rico.platform.roapp'
+			id = 'com.github.rico.ro-app'
+			displayName = 'Rico app plugin'
+			description = 'Rico plugin manages auto configuration of dependencies for spring boot application'
 			implementationClass = 'com.rico.platform.RoAppPlugin'
 		}
 		roCommonPlugin {
-			id = 'com.rico.platform.rocommon'
+			id = 'com.github.rico.common'
+			displayName = 'Rico common plugin'
+			description = 'Rico common plugin manages common dependencies for spring boot application'
 			implementationClass = 'com.rico.platform.RoCommonPlugin'
 		}
 		dockerRunPlugin {
-			id = 'com.rico.platform.dockerRun'
+			id = 'com.github.rico.dockerRun'
+			displayName = 'Rico docker run plugin'
+			description = 'Rico docker run plugin for running a spring boot application as docker container'
 			implementationClass = 'com.rico.platform.DockerRunPlugin'
 		}
 		swarmPlugin {
-			id = 'com.rico.platform.swarm'
+			id = 'com.github.rico.swarm'
+			displayName = 'Rico swarm plugin'
+			description = 'Rico swarm plugin for running a spring boot application as docker swarm service'
 			implementationClass = 'com.rico.platform.SwarmPlugin'
 		}
 	}
