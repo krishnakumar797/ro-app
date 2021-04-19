@@ -101,6 +101,7 @@ class ROExtension {
 		HelmChart helmChart
 		Map<String, String> environment = new HashMap<>()
 		List<String> commands = new ArrayList<>()
+		List<String> dns = new ArrayList<>()
 		Project project
 
 		Docker(Project project) {

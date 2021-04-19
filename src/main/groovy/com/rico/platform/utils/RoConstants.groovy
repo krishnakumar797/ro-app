@@ -9,7 +9,7 @@ package com.rico.platform.utils
 interface RoConstants {
     // Dependent library versions
 	def protobufVersion = "3.11.4"
-	def protocJavaVersion = "1.27.1"
+	def protocJavaVersion = "1.36.0"
 	def grpcVersion = "2.11.0.RELEASE"
 	def springVersion = "5.2.3.RELEASE"
 	def hazelcastVersion = "4.0.2"

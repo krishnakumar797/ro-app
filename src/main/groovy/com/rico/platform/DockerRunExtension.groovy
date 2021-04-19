@@ -28,6 +28,7 @@ class DockerRunExtension {
 	private Set<String> ports = ImmutableSet.of()
 	private Map<String,String> env = ImmutableMap.of()
 	private List<String> arguments = ImmutableList.of()
+	private List<String> dnsNameServers = ImmutableList.of()
 	private List<String> command = ImmutableList.of()
 	private Map<String,String> volumes = ImmutableMap.of()
 	private Map<String,String> hostVolumes = ImmutableMap.of()
@@ -210,4 +211,12 @@ class DockerRunExtension {
 		int val = Integer.parseInt(port)
 		Preconditions.checkArgument(0 < val && val <= 65536, "Port must be in the range [1,65536]")
 	}
+	
+	public List<String> getDnsNameServers() {
+        return dnsNameServers
+    }
+
+    public void dnsNameServers(List<String> dnsNameServers){
+        this.dnsNameServers = ImmutableList.copyOf(dnsNameServers)
+    }
 }
