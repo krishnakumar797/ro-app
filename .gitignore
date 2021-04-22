@@ -10,3 +10,4 @@ build
 
 # Ignore Gradle intellij directory
 .idea
+/gradle.properties

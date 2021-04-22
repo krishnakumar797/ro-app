@@ -40,6 +40,11 @@ class RoAppPlugin implements Plugin<Project> {
         dockerHost = System.getenv('DOCKER_HOST') ?: ""
         def kubeConfig = System.getenv('KUBECONFIG')?:'$HOME/.kube/config'
         kubeConfigFile = new File(kubeConfig);
+
+        dockerRegistry = System.getenv('DOCKER_REGISTRY') ?: "localhost:5000"
+        dockerUser = System.getenv('DOCKER_USER') ?: "0"
+        dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
+        dockerHost = System.getenv('DOCKER_HOST') ?: "tcp://127.0.0.1:2375"
     }
 
     void apply(Project project) {
@@ -188,6 +193,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 network networkName
                                 volumes volumeMappings
                                 command extension.docker.commands
+								dnsNameServers extension.docker.dns
                                 env extension.docker.environment
                                 memoryLimitInMB extension.docker.memoryLimitInMB
                                 memoryReservationInMB extension.docker.memoryReservationInMB
@@ -215,6 +221,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 volumes volumeMappings
                                 hostVolumes hostVolumeMappings
                                 command extension.docker.commands
+								dnsNameServers extension.docker.dns
                                 env extension.docker.environment
                                 serviceName extension.docker.serviceName
                                 swarmMode extension.docker.swarm.swarmMode.name()
@@ -242,7 +249,7 @@ class RoAppPlugin implements Plugin<Project> {
                         if(valuesYaml.exists()){
                             try {
                                 def engine = new groovy.text.SimpleTemplateEngine()
-                                binding.put('imageName', jib.to.image+':'+jib.to.tags.first());
+                                binding.put('imageName', jib.to.image+":"+jib.to.tags.first());
                                 binding.put('imageTag', jib.to.tags.first());
                                 binding.put('buildEnv', buildEnv);
                                 binding.put('restPort', restPortNumber);
@@ -454,6 +461,7 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                     if (extension.monitoring == 'y') {
                         implementation 'org.springframework.boot:spring-boot-starter-actuator'
+                        props.setProperty("management.endpoints.web.exposure.include","health,metrics")
                     }
                     if (extension.devTools == 'y') {
                         developmentOnly 'org.springframework.boot:spring-boot-devtools'
