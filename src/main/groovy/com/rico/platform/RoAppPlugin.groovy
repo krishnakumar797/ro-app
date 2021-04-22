@@ -40,11 +40,6 @@ class RoAppPlugin implements Plugin<Project> {
         dockerHost = System.getenv('DOCKER_HOST') ?: ""
         def kubeConfig = System.getenv('KUBECONFIG')?:'$HOME/.kube/config'
         kubeConfigFile = new File(kubeConfig);
-
-        dockerRegistry = System.getenv('DOCKER_REGISTRY') ?: "localhost:5000"
-        dockerUser = System.getenv('DOCKER_USER') ?: "0"
-        dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
-        dockerHost = System.getenv('DOCKER_HOST') ?: "tcp://127.0.0.1:2375"
     }
 
     void apply(Project project) {
