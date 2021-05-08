@@ -10,7 +10,7 @@ plugins {
 }
 
 group = 'com.github.rico'
-version = '2.12'
+version = '2.13'
 
 pluginBundle {
 	website = 'https://github.com/krishnakumar797/ro-app/wiki'
@@ -61,7 +61,7 @@ publishing {
 		 from components.java
 		 groupId 'com.rico.platform'
 		 artifactId 'ro-app'
-		 version '2.12'
+		 version '2.13'
 	  }
 	}
 }

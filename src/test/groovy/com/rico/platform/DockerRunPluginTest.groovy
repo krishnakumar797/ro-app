@@ -28,7 +28,7 @@ class DockerRunPluginTest {
         """
 		buildFile << """
               plugins {
-                id 'com.rico.platform.dockerRun' version '2.0'
+                id 'com.github.rico.dockerRun' version '2.12'
               }
               def portNums = ["8080:8080", "9090:9090"] as String[]
               dockerRun {

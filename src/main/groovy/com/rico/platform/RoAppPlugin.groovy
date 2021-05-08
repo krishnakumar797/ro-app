@@ -133,7 +133,7 @@ class RoAppPlugin implements Plugin<Project> {
 						if (extension.docker.networkName) {
 							networkName = extension.docker.networkName
 						}
-						apply plugin: 'com.rico.platform.dockerRun'
+						apply plugin: 'com.github.rico.dockerRun'
 						//Applying docker run
 						dockerRun {
 							name extension.docker.containerName
@@ -162,7 +162,7 @@ class RoAppPlugin implements Plugin<Project> {
 							if (extension.docker.networkName) {
 								networkName = extension.docker.networkName
 							}
-							apply plugin: 'com.rico.platform.swarm'
+							apply plugin: 'com.github.rico.swarm'
 							println "Service Name - " + extension.docker.serviceName
 							//Applying Swarm service
 							swarm {
