@@ -18,7 +18,7 @@ class RoAppPlugin implements Plugin<Project> {
 
 
 	final Instantiator instantiator;
-	String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv, dockerRegistry, dockerUser, dockerPassword, dockerHost
+	String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv, dockerRegistry, dockerUser, dockerPassword, dockerHost, baseImage
 	def portNums = []
     def jFlags = []
 
@@ -62,12 +62,19 @@ class RoAppPlugin implements Plugin<Project> {
 					apply plugin: 'com.google.cloud.tools.jib'
 
 					println "Docker Details - ImageName: ${dockerRegistry}/${extension.docker.imageName}"
+					if(extension.docker.baseImage){
+						baseImage = extension.docker.baseImage
+					} else {
+						baseImage = 'openjdk:8u212-jre-alpine'
+					}
+					println "Docker Base Image: ${baseImage} "
+
 					/**
 					 Jib containerization
 					 **/
 					jib {
 						from {
-							image = 'openjdk:8u212-jre-alpine'
+							image = baseImage
 						}
 						to {
 							image = "${dockerRegistry}/${extension.docker.imageName}"
