@@ -21,7 +21,7 @@ class RoAppPlugin implements Plugin<Project> {
 
 
     final Instantiator instantiator;
-    String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv, dockerRegistry, dockerUser, dockerPassword,dockerHost
+    String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv, dockerRegistry, dockerUser, dockerPassword,dockerHost, baseImage
     def portNums = []
     def jFlags = []
     def kubeConfigFile
@@ -45,6 +45,18 @@ class RoAppPlugin implements Plugin<Project> {
     void apply(Project project) {
 
         def extension = project.extensions.create('appConfig', ROExtension, instantiator, project)
+
+        project.buildscript {
+            repositories {
+                mavenCentral()
+                gradlePluginPortal()
+            }
+            dependencies {
+                classpath "org.unbroken-dome.gradle-plugins.helm:helm-plugin:1.6.1"
+                classpath "org.unbroken-dome.gradle-plugins.helm:helm-plugin:1.6.1"
+                classpath "org.unbroken-dome.gradle-plugins.helm:helm-releases-plugin:1.6.1"
+            }
+        }
 
         //Deleting module info file if exist
         def infoFile = project.file("src/main/java/module-info.java")
@@ -73,12 +85,12 @@ class RoAppPlugin implements Plugin<Project> {
 
                 //Applying war plugin
                 if (extension.web) {
-                    apply plugin: 'war'
+                    project.apply plugin: 'war'
                 }
 
                 //Applying Java Modules
                 if (extension.javaModule) {
-                    apply plugin: "org.beryx.jlink"
+                    project.apply plugin: "org.beryx.jlink"
                     application {
                         mainModule = extension.javaMainClass
                         mainClass = extension.javaMainClass
@@ -103,15 +115,21 @@ class RoAppPlugin implements Plugin<Project> {
                 //Applying docker plugin
                 if (extension.docker) {
 
-                    apply plugin: 'com.google.cloud.tools.jib'
+                    project.apply plugin: 'com.google.cloud.tools.jib'
 
                     println "Docker Details - ImageName: ${dockerRegistry}/${extension.docker.imageName}"
+                    if(extension.docker.baseImage){
+                        baseImage = extension.docker.baseImage
+                    } else {
+                        baseImage = 'azul/zulu-openjdk-alpine:11.0.7-jre'
+                    }
+                    println "Docker Base Image: ${baseImage} "
                     /**
                      Jib containerization
                      **/
                     jib {
                         from {
-                            image = 'azul/zulu-openjdk-alpine:11.0.7-jre'
+                            image = baseImage
                         }
                         to {
                             image = "${dockerRegistry}/${extension.docker.imageName}"
@@ -176,7 +194,7 @@ class RoAppPlugin implements Plugin<Project> {
                             networkName = extension.docker.networkName
                         }
                         if (!dockerHost.isEmpty()) {
-                            apply plugin: 'com.rico.platform.dockerRun'
+                            project.apply plugin: 'com.github.rico.dockerRun'
                             //Applying docker run
                             dockerRun {
                                 name extension.docker.containerName
@@ -204,7 +222,7 @@ class RoAppPlugin implements Plugin<Project> {
                             networkName = extension.docker.networkName
                         }
                         if (!dockerHost.isEmpty()) {
-                            apply plugin: 'com.rico.platform.swarm'
+                            project.apply plugin: 'com.github.rico.swarm'
                             println "Service Name - " + extension.docker.serviceName
                             //Applying Swarm service
                             swarm {
@@ -234,12 +252,12 @@ class RoAppPlugin implements Plugin<Project> {
 
                     //Applying helm plugin
                     if (extension.docker.helmChart != null) {
-                        apply plugin: 'org.unbroken-dome.helm'
-                        apply plugin: 'org.unbroken-dome.helm-releases'
-                        apply plugin: 'org.unbroken-dome.helm-commands'
-
+                        project.getPlugins().apply("org.unbroken-dome.helm-commands")
+                        project.getPlugins().apply("org.unbroken-dome.helm")
+                        project.getPlugins().apply("org.unbroken-dome.helm-releases")
+                        println("PROJECT PATH "+project.getPath())
                         //Testing if all the required properties are mapped for values.yaml
-                        def valuesYaml = new File('src/main/helm/values.yaml')
+                        def valuesYaml = file('src/main/helm/values.yaml')
                         def binding = new HashMap()
                         if(valuesYaml.exists()){
                             try {

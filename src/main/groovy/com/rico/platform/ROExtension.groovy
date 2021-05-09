@@ -91,7 +91,7 @@ class ROExtension {
 		SwarmMode REPLICATED_MODE = SwarmMode.REPLICATED
 		SwarmMode GLOBAL_MODE = SwarmMode.GLOBAL
 
-		String imageName, containerName, networkName, serviceName
+		String imageName, baseImage, containerName, networkName, serviceName
 		Long memoryLimitInMB, memoryReservationInMB
 		Double cpuSetLimit, cpuSetReservation
 		HostPortMapping hostPortMapping
