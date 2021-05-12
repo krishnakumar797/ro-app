@@ -484,7 +484,8 @@ class RoAppPlugin implements Plugin<Project> {
                         implementation 'org.springframework.boot:spring-boot-starter-web'
                         implementation 'org.springframework.boot:spring-boot-starter-validation'
                         props.setProperty('spring.mvc.throw-exception-if-no-handler-found', 'true')
-                        if (extension.security != 'y') {
+                        //Checking if the security is enabled or not
+                        if (!extension.security) {
                             props.setProperty("spring.autoconfigure.exclude", 'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration')
                         }
 
@@ -506,7 +507,8 @@ class RoAppPlugin implements Plugin<Project> {
                             implementation 'org.springframework.boot:spring-boot-starter-web'
                             implementation 'org.springframework.boot:spring-boot-starter-validation'
                         }
-                        if (extension.security != 'y') {
+                        //Checking if the security is enabled or not
+                        if (!extension.security) {
                             props.setProperty("spring.autoconfigure.exclude", 'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration')
                         }
                         jFlags.add('-Dserver.port=' + restPortNumber)
