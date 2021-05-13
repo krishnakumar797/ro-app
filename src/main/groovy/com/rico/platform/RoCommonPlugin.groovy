@@ -149,6 +149,7 @@ class RoCommonPlugin implements Plugin<Project> {
                     compileOnly "com.sun.activation:jakarta.activation:${RoConstants.jakartaVersion}"
                     compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
                     compileOnly "com.google.code.findbugs:jsr305:3.0.2"
+                    compileOnly "com.fasterxml.jackson.core:jackson-databind:2.0.1"
 
                     if (configMap.get("couchbase")) {
                         compileOnly 'org.springframework.data:spring-data-couchbase'
@@ -211,6 +212,7 @@ class RoCommonPlugin implements Plugin<Project> {
                     }
                     if (configMap.get("springdata")) {
                         compileOnly 'org.springframework.data:spring-data-jpa'
+                        compileOnly 'org.hibernate:hibernate-entitymanager'
                         if (isModularised) {
                             commonModuleInfo.append("requires static spring.orm;\n")
                             commonModuleInfo.append("requires static com.zaxxer.hikari;\n")

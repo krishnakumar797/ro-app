@@ -13,7 +13,7 @@ import org.gradle.api.tasks.compile.JavaCompile
 import com.rico.platform.utils.RoConstants
 
 /**
- * Custom ro plugin for dependency managment and tools integration
+ * Custom ro plugin for dependency management and tools integration
  *
  * @author krishna*
  */
@@ -108,7 +108,7 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                 } else {
                     application {
-                        mainClass = extension.javaMainClass
+                        mainClassName = extension.javaMainClass
                     }
                 }
 
@@ -161,7 +161,7 @@ class RoAppPlugin implements Plugin<Project> {
                             portMappings = portMappings.concat("${extension.docker.hostPortMapping.hostDebugPort}:${debugPortNumber}")
                         }
                     }
-                    def portMappingArray = []
+                    def portMappingArray = [] as String[]
 
                     if (!portMappings.isEmpty()) {
                         portMappingArray = portMappings.split(",") as String[]
@@ -200,7 +200,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 name extension.docker.containerName
                                 image extension.docker.imageName
                                 tag tagName
-                                if (portMappingArray.length != 0) {
+                                if(!portMappings.isEmpty()){
                                     ports portMappingArray
                                 }
                                 network networkName
@@ -229,7 +229,9 @@ class RoAppPlugin implements Plugin<Project> {
                                 name extension.docker.containerName
                                 image extension.docker.imageName
                                 tag tagName
-                                ports portMappingArray
+                                if(!portMappings.isEmpty()){
+                                    ports portMappingArray
+                                }
                                 network networkName
                                 volumes volumeMappings
                                 hostVolumes hostVolumeMappings
