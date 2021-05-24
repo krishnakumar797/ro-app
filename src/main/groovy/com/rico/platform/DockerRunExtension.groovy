@@ -20,6 +20,10 @@ class DockerRunExtension {
 	private String network
 	private String swarmMode
 	private Integer replicas
+	private String monitoring
+	private Integer healthCheckIntervalInSec
+	private String healthCheckCmd
+	private Long healthCheckInitialDelayInSec
 	private Long memoryLimitInMB
 	private Long memoryReservationInMB
 	private Double cpuSetLimit
@@ -55,6 +59,14 @@ class DockerRunExtension {
 		return swarmMode;
 	}
 
+	String getMonitoring() {
+		return monitoring
+	}
+
+	void setMonitoring(String monitoring) {
+		this.monitoring = monitoring
+	}
+
 	public void setSwarmMode(String swarmMode) {
 		this.swarmMode = swarmMode;
 	}
@@ -65,6 +77,30 @@ class DockerRunExtension {
 
 	public void setReplicas(Integer replicas) {
 		this.replicas = replicas;
+	}
+
+	Integer getHealthCheckIntervalInSec() {
+		return healthCheckIntervalInSec
+	}
+
+	void setHealthCheckIntervalInSec(Integer healthCheckIntervalInSec) {
+		this.healthCheckIntervalInSec = healthCheckIntervalInSec
+	}
+
+	String getHealthCheckCmd() {
+		return healthCheckCmd
+	}
+
+	void setHealthCheckCmd(String healthCheckCmd) {
+		this.healthCheckCmd = healthCheckCmd
+	}
+
+	Long getHealthCheckInitialDelayInSec() {
+		return healthCheckInitialDelayInSec
+	}
+
+	void setHealthCheckInitialDelayInSec(Long healthCheckInitialDelayInSec) {
+		this.healthCheckInitialDelayInSec = healthCheckInitialDelayInSec
 	}
 
 	public boolean isRollbackOnUpdateFailure() {

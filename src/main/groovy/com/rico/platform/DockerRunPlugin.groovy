@@ -6,6 +6,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
+import com.github.dockerjava.api.model.HealthCheck
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.command.CreateContainerCmd
@@ -138,6 +139,12 @@ class DockerRunPlugin implements Plugin<Project> {
 					if (ext.memoryReservationInMB != null) {
 						args.put("memoryReservationInMB", ext.memoryReservationInMB.toString())
 					}
+
+					//Adding health check
+					args.put("monitoring", ext.monitoring.toString())
+					args.put("healthCheckCmd", ext.healthCheckCmd.toString())
+					args.put("healthCheckIntervalInSec", ext.healthCheckIntervalInSec.toString())
+					args.put("healthCheckInitialDelayInSec", ext.healthCheckInitialDelayInSec.toString())
 
 					//Adding cpu limits
 					if (ext.cpuSetLimit != null) {
@@ -281,6 +288,18 @@ class DockerRunPlugin implements Plugin<Project> {
 		}
 		if(!envs.isEmpty()) {
 			containerCmd = containerCmd.withEnv(envs)
+		}
+		//Adding health check
+		if(args.get("monitoring") == 'y') {
+			HealthCheck check = new HealthCheck();
+			check.withStartPeriod(Long.parseLong(args.get("healthCheckInitialDelayInSec")) * 1000)
+			check.withInterval(Long.parseLong(args.get("healthCheckIntervalInSec")) * 1000)
+			check.withRetries(5)
+			check.withTimeout(8 * 1000)
+			def tests = []
+			tests.add(args.get("healthCheckCmd"))
+			check.withTest(tests)
+			containerCmd.withHealthcheck(check)
 		}
 		if(!commandList.isEmpty()) {
 			containerCmd = containerCmd.withCmd(commandList)

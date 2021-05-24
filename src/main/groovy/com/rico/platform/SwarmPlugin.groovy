@@ -2,6 +2,7 @@ package com.rico.platform
 
 import com.github.dockerjava.api.model.AuthConfig
 import com.github.dockerjava.api.model.ContainerDNSConfig
+import com.github.dockerjava.api.model.HealthCheck
 
 import java.util.Map.Entry
 
@@ -153,6 +154,13 @@ class SwarmPlugin implements Plugin<Project> {
 						args.put("cpuSetReservation", String.valueOf(ext.cpuSetReservation))
 					}
 
+					//Adding health check
+					args.put("monitoring", ext.monitoring.toString())
+					args.put("healthCheckCmd", ext.healthCheckCmd.toString())
+					args.put("healthCheckIntervalInSec", ext.healthCheckIntervalInSec.toString())
+					args.put("healthCheckInitialDelayInSec", ext.healthCheckInitialDelayInSec.toString())
+
+					//Adding rollback on failure
 					args.put("rollbackonUpdateFailure", ext.rollbackOnUpdateFailure?"1":"0")
 					//Adding ports
 					List<PortConfig> pConfigList = new ArrayList()
@@ -281,6 +289,19 @@ class SwarmPlugin implements Plugin<Project> {
 			ContainerDNSConfig dnsConfig = new ContainerDNSConfig()
 			dnsConfig.withNameservers(dnsList)
 			containerSpec.withDnsConfig(dnsConfig)
+		}
+
+		//Adding health check
+		if(args.get("monitoring") == 'y') {
+			HealthCheck check = new HealthCheck();
+			check.withStartPeriod(Long.parseLong(args.get("healthCheckInitialDelayInSec")) * 1000)
+			check.withInterval(Long.parseLong(args.get("healthCheckIntervalInSec")) * 1000)
+			check.withRetries(5)
+			check.withTimeout(8 * 1000)
+			def tests = []
+			tests.add(args.get("healthCheckCmd"))
+			check.withTest(tests)
+			containerSpec.withHealthCheck(check)
 		}
 
 		//Creating service

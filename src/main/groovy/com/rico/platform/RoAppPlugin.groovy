@@ -188,6 +188,25 @@ class RoAppPlugin implements Plugin<Project> {
 						}
 					}
 
+                    //Default health check command
+                    def healthCheck = "curl http://${extension.docker.swarm.serviceName}:8080/actuator/health"
+                    def healthCheckInterval = 30
+                    def healthCheckInitialDelay = 60
+                    if(extension.docker.healthCheck) {
+                        if(extension.monitoring != 'y'){
+                            println "Enable monitoring for adding health check"
+                        }
+                        if(extension.docker.healthCheck.healthCheckCmd) {
+                            healthCheck = extension.docker.healthCheck.healthCheckCmd
+                        }
+                        if(extension.docker.healthCheck.healthCheckIntervalInSec){
+                            healthCheckInterval = extension.docker.healthCheck.healthCheckIntervalInSec
+                        }
+                        if(extension.docker.healthCheck.healthCheckInitialDelayInSec){
+                            healthCheckInitialDelay = extension.docker.healthCheck.healthCheckInitialDelayInSec
+                        }
+                    }
+
                     if (extension.docker.swarm == null && extension.docker.helmChart == null) {
                         def networkName = 'bridge'
                         if (extension.docker.networkName) {
@@ -203,8 +222,13 @@ class RoAppPlugin implements Plugin<Project> {
                                 if(!portMappings.isEmpty()){
                                     ports portMappingArray
                                 }
+                                monitoring extension.monitoring
                                 network networkName
                                 volumes volumeMappings
+                                hostVolumes hostVolumeMappings
+                                healthCheckCmd healthCheck
+                                healthCheckIntervalInSec healthCheckInterval
+                                healthCheckInitialDelayInSec healthCheckInitialDelay
                                 command extension.docker.commands
 								dnsNameServers extension.docker.dns
                                 env extension.docker.environment
@@ -223,7 +247,7 @@ class RoAppPlugin implements Plugin<Project> {
                         }
                         if (!dockerHost.isEmpty()) {
                             project.apply plugin: 'com.github.rico.swarm'
-                            println "Service Name - " + extension.docker.serviceName
+                            println "Service Name - " + extension.docker.swarm.serviceName
                             //Applying Swarm service
                             swarm {
                                 name extension.docker.containerName
@@ -232,15 +256,19 @@ class RoAppPlugin implements Plugin<Project> {
                                 if(!portMappings.isEmpty()){
                                     ports portMappingArray
                                 }
+                                monitoring extension.monitoring
                                 network networkName
                                 volumes volumeMappings
                                 hostVolumes hostVolumeMappings
                                 command extension.docker.commands
 								dnsNameServers extension.docker.dns
                                 env extension.docker.environment
-                                serviceName extension.docker.serviceName
+                                serviceName extension.docker.swarm.serviceName
                                 swarmMode extension.docker.swarm.swarmMode.name()
                                 replicas extension.docker.swarm.replicas
+                                healthCheckCmd healthCheck
+                                healthCheckIntervalInSec healthCheckInterval
+                                healthCheckInitialDelayInSec healthCheckInitialDelay
                                 rollbackOnUpdateFailure extension.docker.swarm.rollbackOnUpdateFailure
                                 memoryLimitInMB extension.docker.memoryLimitInMB
                                 memoryReservationInMB extension.docker.memoryReservationInMB

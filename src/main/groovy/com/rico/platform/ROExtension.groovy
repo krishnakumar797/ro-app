@@ -70,6 +70,12 @@ class ROExtension {
 			String hostPath, containerPath
 		}
 
+		static class HealthCheck {
+			String healthCheckCmd
+			Integer healthCheckIntervalInSec
+			Long healthCheckInitialDelayInSec
+		}
+
 		enum SwarmMode {
 			REPLICATED, GLOBAL
 		}
@@ -78,6 +84,7 @@ class ROExtension {
 		static class Swarm {
 			SwarmMode swarmMode
 			Integer replicas
+			String serviceName
 			boolean rollbackOnUpdateFailure
 		}
 
@@ -91,12 +98,13 @@ class ROExtension {
 		SwarmMode REPLICATED_MODE = SwarmMode.REPLICATED
 		SwarmMode GLOBAL_MODE = SwarmMode.GLOBAL
 
-		String imageName, baseImage, containerName, networkName, serviceName
+		String imageName, baseImage, containerName, networkName
 		Long memoryLimitInMB, memoryReservationInMB
 		Double cpuSetLimit, cpuSetReservation
 		HostPortMapping hostPortMapping
 		VolumeMapping volumeMapping
 		HostVolumeMapping hostVolumeMapping
+		HealthCheck healthCheck
 		Swarm swarm
 		HelmChart helmChart
 		Map<String, String> environment = new HashMap<>()
@@ -124,6 +132,12 @@ class ROExtension {
 			def hostVolumeMapping = new HostVolumeMapping()
 			this.project.configure(hostVolumeMapping, closure)
 			this.hostVolumeMapping = hostVolumeMapping
+		}
+
+		void healthCheck(Closure closure) {
+			def healthCheck = new HealthCheck()
+			this.project.configure(healthCheck, closure)
+			this.healthCheck = healthCheck
 		}
 
 		void swarm(Closure closure) {
