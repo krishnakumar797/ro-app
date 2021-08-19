@@ -189,7 +189,7 @@ class RoAppPlugin implements Plugin<Project> {
 					}
 
                     //Default health check command
-                    def healthCheck = "curl http://${extension.docker.swarm.serviceName}:8080/actuator/health"
+                    def healthCheck = "curl http://${extension.docker.swarm.serviceName}:${restPortNumber}/actuator/health"
                     def healthCheckInterval = 30
                     def healthCheckInitialDelay = 60
                     if(extension.docker.healthCheck) {
@@ -431,6 +431,19 @@ class RoAppPlugin implements Plugin<Project> {
             //Adding dependencies for each project
 
             project.with {
+
+                //Adding JUnit test dependency
+                dependencyManagement {
+                    imports {
+                        mavenBom "org.junit:junit-bom:${RoConstants.junitTestVersion}"
+                    }
+                }
+
+                //Adding junit test platform
+                test {
+                    useJUnitPlatform()
+                }
+
                 // Defining dependencies
                 dependencies {
 
@@ -460,13 +473,15 @@ class RoAppPlugin implements Plugin<Project> {
                     testImplementation('org.springframework.boot:spring-boot-starter-test') {
                         exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
                     }
-                    // JUnit testing
+
+                    // Mockito libraries
                     testImplementation("org.mockito:mockito-core:3.4.0")
                     testImplementation 'org.mockito:mockito-inline:3.4.6'
-                    testImplementation("org.junit.jupiter:junit-jupiter-api:${RoConstants.junitTestVersion}")
-                    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${RoConstants.junitTestVersion}")
-                    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.5.2")
 
+                    testCompileOnly('org.junit.jupiter:junit-jupiter-api')
+                    testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine')
+                    testCompileOnly('org.junit.jupiter:junit-jupiter-params')
+                    testCompileOnly('org.junit.platform:junit-platform-launcher')
 
                     if (extension.security == 'form' || extension.security == 'jwt') {
                         if (extension.rest != 'y' && extension.web != 'y') {
