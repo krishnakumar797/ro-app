@@ -9,6 +9,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.internal.reflect.Instantiator
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 import com.rico.platform.utils.RoConstants
 
@@ -52,9 +53,11 @@ class RoAppPlugin implements Plugin<Project> {
                 gradlePluginPortal()
             }
             dependencies {
-                classpath "org.unbroken-dome.gradle-plugins.helm:helm-plugin:1.6.1"
+                classpath "gradle.plugin.com.google.cloud.tools:jib-gradle-plugin:2.7.1"
                 classpath "org.unbroken-dome.gradle-plugins.helm:helm-plugin:1.6.1"
                 classpath "org.unbroken-dome.gradle-plugins.helm:helm-releases-plugin:1.6.1"
+                classpath "org.beryx:badass-jlink-plugin:2.24.1"
+                classpath "de.jjohannes.gradle:extra-java-module-info:0.9"
             }
         }
 
@@ -82,6 +85,13 @@ class RoAppPlugin implements Plugin<Project> {
 
             //Applying configuration for each project
             project.configure(project) {
+
+                //Setting jdk 11 tool chain
+                java {
+                    toolchain {
+                        languageVersion = JavaLanguageVersion.of(11)
+                    }
+                }
 
                 //Applying war plugin
                 if (extension.web) {
@@ -142,8 +152,16 @@ class RoAppPlugin implements Plugin<Project> {
                         container {
                             jvmFlags = jFlags
                             ports = portNums
-                            labels = [key1: 'value1', key2: 'value2']
                             mainClass = extension.javaMainClass
+                            if(!extension.docker.labels.isEmpty()) {
+                                labels = extension.docker.labels
+                            }
+                            if(extension.docker.creationTime){
+                                creationTime = extension.docker.creationTime
+                            }
+                            if(extension.docker.filesModificationTime){
+                                filesModificationTime = extension.docker.filesModificationTime
+                            }
                         }
                         allowInsecureRegistries = true
                     }
@@ -189,7 +207,7 @@ class RoAppPlugin implements Plugin<Project> {
 					}
 
                     //Default health check command
-                    def healthCheck = "curl http://${extension.docker.swarm.serviceName}:${restPortNumber}/actuator/health"
+                    def healthCheck = "curl http://${extension.docker.containerName}:${restPortNumber}/actuator/health"
                     def healthCheckInterval = 30
                     def healthCheckInitialDelay = 60
                     if(extension.docker.healthCheck) {
@@ -241,6 +259,7 @@ class RoAppPlugin implements Plugin<Project> {
                             println "No DOCKER_HOST variable defined. Suspending DOCKER RUN plugin."
                         }
                     } else if(extension.docker.swarm != null) {
+                        healthCheck = "curl http://${extension.docker.swarm.serviceName}:${restPortNumber}/actuator/health"
                         def networkName = 'ingress'
                         if (extension.docker.networkName) {
                             networkName = extension.docker.networkName
@@ -395,6 +414,12 @@ class RoAppPlugin implements Plugin<Project> {
                 if (project.appConfig.logging) {
                     enabledServices += "logging "
                 }
+                if (project.appConfig.monitoring) {
+                    enabledServices += "monitoring "
+                }
+                if (project.appConfig.unitTest) {
+                    enabledServices += "unitTest "
+                }
                 if (project.appConfig.keyvaluestore) {
                     enabledServices += "redis "
                 }
@@ -432,18 +457,6 @@ class RoAppPlugin implements Plugin<Project> {
 
             project.with {
 
-                //Adding JUnit test dependency
-                dependencyManagement {
-                    imports {
-                        mavenBom "org.junit:junit-bom:${RoConstants.junitTestVersion}"
-                    }
-                }
-
-                //Adding junit test platform
-                test {
-                    useJUnitPlatform()
-                }
-
                 // Defining dependencies
                 dependencies {
 
@@ -469,19 +482,20 @@ class RoAppPlugin implements Plugin<Project> {
 
                     }
 
-                    //Adding spring boot test frameworks to all applications
-                    testImplementation('org.springframework.boot:spring-boot-starter-test') {
-                        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+                    if(extension.unitTest == 'y') {
+                        //Adding spring boot test frameworks to all applications
+                        testImplementation('org.springframework.boot:spring-boot-starter-test') {
+                            exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+                        }
+                        //JUnit 5 libraries
+                        testImplementation(platform("org.junit:junit-bom:${RoConstants.junitTestVersion}"))
+                        testImplementation('org.junit.jupiter:junit-jupiter')
+
+                        // Mockito libraries
+                        testImplementation("org.mockito:mockito-core:${RoConstants.mockitoVersion}")
+                        testImplementation("org.mockito:mockito-inline:${RoConstants.mockitoVersion}")
+                        testCompileOnly("org.mockito:mockito-junit-jupiter:${RoConstants.mockitoVersion}")
                     }
-
-                    // Mockito libraries
-                    testImplementation("org.mockito:mockito-core:3.4.0")
-                    testImplementation 'org.mockito:mockito-inline:3.4.6'
-
-                    testCompileOnly('org.junit.jupiter:junit-jupiter-api')
-                    testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine')
-                    testCompileOnly('org.junit.jupiter:junit-jupiter-params')
-                    testCompileOnly('org.junit.platform:junit-platform-launcher')
 
                     if (extension.security == 'form' || extension.security == 'jwt') {
                         if (extension.rest != 'y' && extension.web != 'y') {
@@ -518,14 +532,18 @@ class RoAppPlugin implements Plugin<Project> {
                         implementation "com.auth0:java-jwt:${RoConstants.jwtVersion}"
                     }
                     if (extension.monitoring == 'y') {
+                        if (extension.rest != 'y') {
+                            throw new GradleException("Monitoring cant be configured without rest config for the application")
+                        }
                         implementation 'org.springframework.boot:spring-boot-starter-actuator'
-                        props.setProperty("management.endpoints.web.exposure.include","health,metrics")
+                        implementation 'io.micrometer:micrometer-registry-prometheus:latest.release'
+                        props.setProperty("management.endpoints.web.exposure.include","prometheus,health,metrics")
                     }
                     if (extension.devTools == 'y') {
                         developmentOnly 'org.springframework.boot:spring-boot-devtools'
                     }
                     if (extension.rest == 'y') {
-                        runtimeOnly "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
+                        implementation "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
                         implementation 'org.springframework.boot:spring-boot-starter-web'
                         implementation 'org.springframework.boot:spring-boot-starter-validation'
                         props.setProperty('spring.mvc.throw-exception-if-no-handler-found', 'true')
@@ -676,6 +694,14 @@ class RoAppPlugin implements Plugin<Project> {
 
                     }
                 }
+
+                //Adding junit test platform
+                test {
+                    if(extension.unitTest == 'y') {
+                        useJUnitPlatform()
+                    }
+                }
+
 
                 //Defining custom build task
                 def buildApp = tasks.register("build-${project.name}") {

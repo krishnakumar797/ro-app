@@ -26,6 +26,7 @@ class ROExtension {
 	String web
 	String search
 	String logging
+	String unitTest
 	String monitoring
 	String devTools
 	String javaModule
@@ -98,7 +99,7 @@ class ROExtension {
 		SwarmMode REPLICATED_MODE = SwarmMode.REPLICATED
 		SwarmMode GLOBAL_MODE = SwarmMode.GLOBAL
 
-		String imageName, baseImage, containerName, networkName
+		String imageName, baseImage, containerName, networkName, creationTime, filesModificationTime
 		Long memoryLimitInMB, memoryReservationInMB
 		Double cpuSetLimit, cpuSetReservation
 		HostPortMapping hostPortMapping
@@ -110,6 +111,7 @@ class ROExtension {
 		Map<String, String> environment = new HashMap<>()
 		List<String> commands = new ArrayList<>()
 		List<String> dns = new ArrayList<>()
+		Map<String, String> labels = new HashMap<>()
 		Project project
 
 		Docker(Project project) {

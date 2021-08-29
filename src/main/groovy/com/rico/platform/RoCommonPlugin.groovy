@@ -1,18 +1,15 @@
 package com.rico.platform
 
-import org.gradle.api.tasks.compile.JavaCompile
+import com.rico.platform.utils.RoConstants
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.plugins.JavaPlugin
+import org.gradle.internal.reflect.Instantiator
 
 import javax.inject.Inject
 
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.internal.reflect.Instantiator
-import org.gradle.api.plugins.JavaPlugin
-
-import com.rico.platform.utils.RoConstants
-
 /**
- * Common ro plugin for dependency managment
+ * Common ro plugin for common dependency management
  *
  * @author krishna*
  */
@@ -28,7 +25,20 @@ class RoCommonPlugin implements Plugin<Project> {
         this.instantiator = instantiator;
     }
 
+    @Override
     void apply(Project project) {
+
+        def extension = project.extensions.create('appConfig', RoCommonExtension, instantiator, project)
+
+        project.buildscript {
+            repositories {
+                mavenCentral()
+                gradlePluginPortal()
+            }
+            dependencies {
+                classpath "gradle.plugin.com.google.protobuf:protobuf-gradle-plugin:0.8.11"
+            }
+        }
 
         //Deleting module info file if exist
         def infoFile = project.file("src/main/java/module-info.java")
@@ -98,8 +108,8 @@ class RoCommonPlugin implements Plugin<Project> {
             for (Map.Entry<String, Project> map : childProjects) {
                 if (!map.getKey().contentEquals(project.getName())) {
                     Project project1 = map.getValue()
-                    ROExtension extension = (ROExtension) project1.getExtensions().findByName("appConfig")
-                    if (extension.javaModule) {
+                    ROExtension roExtension = (ROExtension) project1.getExtensions().findByName("appConfig")
+                    if (roExtension.javaModule) {
                         isModularised = true
                         break
                     }
@@ -111,6 +121,53 @@ class RoCommonPlugin implements Plugin<Project> {
                 ext {
                     set('elasticsearch.version', '7.0.0')
                 }
+                //Applying generate protobuf plugin
+                if (extension.autoGenerateJavaClassForProtoFiles) {
+                    println "ROOT PROJECT PATH $projectDir"
+                    project.apply plugin: 'com.google.protobuf'
+                    println "To auto generate java class place the proto files under src/main/proto and run generateProto command in the common project"
+                    // Place proto files under src/main/proto
+                    sourceSets {
+                        main {
+                            proto {
+                                srcDir 'src/main/proto'
+                            }
+                            java {
+                                srcDir 'src/main/java'
+                            }
+                        }
+                    }
+
+                    //Generate java classes based on proto files
+                    protobuf {
+                        protoc {
+                            artifact = "com.google.protobuf:protoc:${RoConstants.protobufVersion}"
+                        }
+                        plugins {
+                            grpc {
+                                artifact = "io.grpc:protoc-gen-grpc-java::${RoConstants.protocJavaVersion}"
+                            }
+                        }
+
+                        generateProtoTasks {
+                            ofSourceSet('main').each { task ->
+                                task.builtins {
+                                    java{
+                                        outputSubDir = 'java'
+                                    }
+                                }
+                                task.plugins {
+                                    grpc {
+                                        outputSubDir = 'java'
+                                    }
+                                }
+                            }
+                        }
+                        generatedFilesBaseDir = "$projectDir/src"
+                    }
+                }
+
+
                 if (isModularised) {
 //                    apply plugin: 'de.jjohannes.extra-java-module-info'
 //                    extraJavaModuleInfo {
@@ -278,16 +335,7 @@ class RoCommonPlugin implements Plugin<Project> {
                         }
                     }
 
-
-
                     implementation "org.javassist:javassist:${RoConstants.javaAssistVersion}"
-
-                    // JUnit testing
-                    testImplementation("org.mockito:mockito-core:3.4.0")
-                    testImplementation 'org.mockito:mockito-inline:3.4.6'
-                    testImplementation("org.junit.jupiter:junit-jupiter-api:${RoConstants.junitTestVersion}")
-                    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${RoConstants.junitTestVersion}")
-                    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.5.2")
 
                     //Common libs
                     if (configMap.get("springdata") || configMap.get("hibernate")) {
@@ -295,6 +343,10 @@ class RoCommonPlugin implements Plugin<Project> {
                     }
                     if (configMap.get("kafka") || configMap.get("grpc")) {
                         compileOnly "com.google.protobuf:protobuf-java:${RoConstants.protobufVersion}"
+                    }
+
+                    if (extension.autoGenerateJavaClassForProtoFiles) {
+                        implementation "com.google.protobuf:protobuf-java-util:${RoConstants.protobufVersion}"
                     }
 
 
