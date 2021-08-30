@@ -355,7 +355,7 @@ class RoCommonPlugin implements Plugin<Project> {
 
                     if(extension.unitTest == 'y') {
                         //Adding spring boot test frameworks to all applications
-                        testCompileOnly('org.springframework.boot:spring-boot-starter-test') {
+                        testImplementation('org.springframework.boot:spring-boot-starter-test') {
                             exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
                         }
                         //Use Springboot test starter package provided Junit instead of using Junit standalone
