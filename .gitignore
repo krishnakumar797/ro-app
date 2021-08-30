@@ -11,3 +11,4 @@ build
 # Ignore Gradle intellij directory
 .idea
 /gradle.properties
+/src/main/resources/projectInfo.properties
