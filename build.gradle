@@ -10,6 +10,8 @@ plugins {
 	id 'idea'
 }
 
+def ricoPluginVersion = "3.10"
+
 group = 'com.github.rico'
 version = "${ricoPluginVersion}"
 
