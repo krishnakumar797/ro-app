@@ -533,10 +533,10 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                     if (extension.monitoring == 'y') {
                         if (extension.rest != 'y') {
-                            throw new GradleException("Monitoring cant be configured without rest config for the application")
+                            implementation 'org.springframework.boot:spring-boot-starter-web'
                         }
                         implementation 'org.springframework.boot:spring-boot-starter-actuator'
-                        implementation 'io.micrometer:micrometer-registry-prometheus:latest.release'
+                        implementation 'io.micrometer:micrometer-registry-prometheus'
                         props.setProperty("management.endpoints.web.exposure.include","prometheus,health,metrics")
                     }
                     if (extension.devTools == 'y') {
