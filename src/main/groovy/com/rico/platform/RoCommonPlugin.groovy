@@ -122,7 +122,7 @@ class RoCommonPlugin implements Plugin<Project> {
                     set('elasticsearch.version', '7.0.0')
                 }
                 //Applying generate protobuf plugin
-                if (extension.autoGenerateJavaClassForProtoFiles) {
+                if (extension.autoGenerateJavaClassForProtoFiles == 'y') {
                     println "ROOT PROJECT PATH $projectDir"
                     project.apply plugin: 'com.google.protobuf'
                     println "To auto generate java class place the proto files under src/main/proto and run generateProto command in the common project"
@@ -166,7 +166,11 @@ class RoCommonPlugin implements Plugin<Project> {
                         generatedFilesBaseDir = "$projectDir/src"
                     }
                 }
-
+                if(extension.unitTest == 'y'){
+                    configurations {
+                        testImplementation.extendsFrom compileOnly
+                    }
+                }
 
                 if (isModularised) {
 //                    apply plugin: 'de.jjohannes.extra-java-module-info'
@@ -345,8 +349,24 @@ class RoCommonPlugin implements Plugin<Project> {
                         compileOnly "com.google.protobuf:protobuf-java:${RoConstants.protobufVersion}"
                     }
 
-                    if (extension.autoGenerateJavaClassForProtoFiles) {
+                    if (extension.autoGenerateJavaClassForProtoFiles == 'y') {
                         implementation "com.google.protobuf:protobuf-java-util:${RoConstants.protobufVersion}"
+                    }
+
+                    if(extension.unitTest == 'y') {
+                        //Adding spring boot test frameworks to all applications
+                        testCompileOnly('org.springframework.boot:spring-boot-starter-test') {
+                            exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+                        }
+                        //Use Springboot test starter package provided Junit instead of using Junit standalone
+                        //JUnit 5 libraries
+                      //  testCompileOnly(platform("org.junit:junit-bom:${RoConstants.junitTestVersion}"))
+                      //  testCompileOnly('org.junit.jupiter:junit-jupiter')
+
+                        // Mockito libraries
+                        testCompileOnly("org.mockito:mockito-core:${RoConstants.mockitoVersion}")
+                        testCompileOnly("org.mockito:mockito-inline:${RoConstants.mockitoVersion}")
+                        testCompileOnly("org.mockito:mockito-junit-jupiter:${RoConstants.mockitoVersion}")
                     }
 
 
@@ -364,6 +384,13 @@ class RoCommonPlugin implements Plugin<Project> {
                         }
 
                         commonModuleInfo.append("}")
+                    }
+                }
+
+                //Adding junit test platform
+                test {
+                    if (extension.unitTest == 'y') {
+                        useJUnitPlatform()
                     }
                 }
             }

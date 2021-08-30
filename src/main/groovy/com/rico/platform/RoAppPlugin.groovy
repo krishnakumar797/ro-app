@@ -22,7 +22,7 @@ class RoAppPlugin implements Plugin<Project> {
 
 
     final Instantiator instantiator;
-    String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv, dockerRegistry, dockerUser, dockerPassword,dockerHost, baseImage
+    String restPortNumber, debugPortNumber, grpcPortNumber, tagName, dbHost, buildEnv, dockerRegistry, dockerUser, dockerPassword, dockerHost, baseImage
     def portNums = []
     def jFlags = []
     def kubeConfigFile
@@ -39,7 +39,7 @@ class RoAppPlugin implements Plugin<Project> {
         dockerUser = System.getenv('DOCKER_USER') ?: "0"
         dockerPassword = System.getenv('DOCKER_PASSWORD') ?: "0"
         dockerHost = System.getenv('DOCKER_HOST') ?: ""
-        def kubeConfig = System.getenv('KUBECONFIG')?:'$HOME/.kube/config'
+        def kubeConfig = System.getenv('KUBECONFIG') ?: '$HOME/.kube/config'
         kubeConfigFile = new File(kubeConfig);
     }
 
@@ -75,7 +75,7 @@ class RoAppPlugin implements Plugin<Project> {
             jFlags = ['-Xms256m', '-agentlib:jdwp=transport=dt_socket,address=0.0.0.0:' + debugPortNumber + ',server=y,suspend=n', '-Dspring.profiles.active=local', '-Dspring.devtools.restart.enabled=false']
             portNums.add(debugPortNumber)
         } else {
-            jFlags = ['-Xms256m', '-Dspring.devtools.restart.enabled=false', '-Dspring.profiles.active='+buildEnv]
+            jFlags = ['-Xms256m', '-Dspring.devtools.restart.enabled=false', '-Dspring.profiles.active=' + buildEnv]
         }
 
         def date = new Date()
@@ -128,7 +128,7 @@ class RoAppPlugin implements Plugin<Project> {
                     project.apply plugin: 'com.google.cloud.tools.jib'
 
                     println "Docker Details - ImageName: ${dockerRegistry}/${extension.docker.imageName}"
-                    if(extension.docker.baseImage){
+                    if (extension.docker.baseImage) {
                         baseImage = extension.docker.baseImage
                     } else {
                         baseImage = 'azul/zulu-openjdk-alpine:11.0.7-jre'
@@ -153,13 +153,13 @@ class RoAppPlugin implements Plugin<Project> {
                             jvmFlags = jFlags
                             ports = portNums
                             mainClass = extension.javaMainClass
-                            if(!extension.docker.labels.isEmpty()) {
+                            if (!extension.docker.labels.isEmpty()) {
                                 labels = extension.docker.labels
                             }
-                            if(extension.docker.creationTime){
+                            if (extension.docker.creationTime) {
                                 creationTime = extension.docker.creationTime
                             }
-                            if(extension.docker.filesModificationTime){
+                            if (extension.docker.filesModificationTime) {
                                 filesModificationTime = extension.docker.filesModificationTime
                             }
                         }
@@ -200,27 +200,27 @@ class RoAppPlugin implements Plugin<Project> {
                         }
                     }
                     def hostVolumeMappings = [:]
-					if(extension.docker.hostVolumeMapping){
-						if(extension.docker.hostVolumeMapping.hostPath && extension.docker.hostVolumeMapping.containerPath){
-							hostVolumeMappings.put(extension.docker.hostVolumeMapping.hostPath, extension.docker.hostVolumeMapping.containerPath)
-						}
-					}
+                    if (extension.docker.hostVolumeMapping) {
+                        if (extension.docker.hostVolumeMapping.hostPath && extension.docker.hostVolumeMapping.containerPath) {
+                            hostVolumeMappings.put(extension.docker.hostVolumeMapping.hostPath, extension.docker.hostVolumeMapping.containerPath)
+                        }
+                    }
 
                     //Default health check command
                     def healthCheck = "curl http://${extension.docker.containerName}:${restPortNumber}/actuator/health"
                     def healthCheckInterval = 30
                     def healthCheckInitialDelay = 60
-                    if(extension.docker.healthCheck) {
-                        if(extension.monitoring != 'y'){
+                    if (extension.docker.healthCheck) {
+                        if (extension.monitoring != 'y') {
                             println "Enable monitoring for adding health check"
                         }
-                        if(extension.docker.healthCheck.healthCheckCmd) {
+                        if (extension.docker.healthCheck.healthCheckCmd) {
                             healthCheck = extension.docker.healthCheck.healthCheckCmd
                         }
-                        if(extension.docker.healthCheck.healthCheckIntervalInSec){
+                        if (extension.docker.healthCheck.healthCheckIntervalInSec) {
                             healthCheckInterval = extension.docker.healthCheck.healthCheckIntervalInSec
                         }
-                        if(extension.docker.healthCheck.healthCheckInitialDelayInSec){
+                        if (extension.docker.healthCheck.healthCheckInitialDelayInSec) {
                             healthCheckInitialDelay = extension.docker.healthCheck.healthCheckInitialDelayInSec
                         }
                     }
@@ -237,7 +237,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 name extension.docker.containerName
                                 image extension.docker.imageName
                                 tag tagName
-                                if(!portMappings.isEmpty()){
+                                if (!portMappings.isEmpty()) {
                                     ports portMappingArray
                                 }
                                 monitoring extension.monitoring
@@ -248,7 +248,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 healthCheckIntervalInSec healthCheckInterval
                                 healthCheckInitialDelayInSec healthCheckInitialDelay
                                 command extension.docker.commands
-								dnsNameServers extension.docker.dns
+                                dnsNameServers extension.docker.dns
                                 env extension.docker.environment
                                 memoryLimitInMB extension.docker.memoryLimitInMB
                                 memoryReservationInMB extension.docker.memoryReservationInMB
@@ -258,7 +258,7 @@ class RoAppPlugin implements Plugin<Project> {
                         } else {
                             println "No DOCKER_HOST variable defined. Suspending DOCKER RUN plugin."
                         }
-                    } else if(extension.docker.swarm != null) {
+                    } else if (extension.docker.swarm != null) {
                         healthCheck = "curl http://${extension.docker.swarm.serviceName}:${restPortNumber}/actuator/health"
                         def networkName = 'ingress'
                         if (extension.docker.networkName) {
@@ -272,7 +272,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 name extension.docker.containerName
                                 image extension.docker.imageName
                                 tag tagName
-                                if(!portMappings.isEmpty()){
+                                if (!portMappings.isEmpty()) {
                                     ports portMappingArray
                                 }
                                 monitoring extension.monitoring
@@ -280,7 +280,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 volumes volumeMappings
                                 hostVolumes hostVolumeMappings
                                 command extension.docker.commands
-								dnsNameServers extension.docker.dns
+                                dnsNameServers extension.docker.dns
                                 env extension.docker.environment
                                 serviceName extension.docker.swarm.serviceName
                                 swarmMode extension.docker.swarm.swarmMode.name()
@@ -294,7 +294,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 cpuSetLimit extension.docker.cpuSetLimit
                                 cpuSetReservation extension.docker.cpuSetReservation
                             }
-                        }else {
+                        } else {
                             println "No DOCKER_HOST variable defined. Suspending SWARM plugin."
                         }
                     }
@@ -304,14 +304,14 @@ class RoAppPlugin implements Plugin<Project> {
                         project.getPlugins().apply("org.unbroken-dome.helm-commands")
                         project.getPlugins().apply("org.unbroken-dome.helm")
                         project.getPlugins().apply("org.unbroken-dome.helm-releases")
-                        println("PROJECT PATH "+project.getPath())
+                        println("PROJECT PATH " + project.getPath())
                         //Testing if all the required properties are mapped for values.yaml
                         def valuesYaml = file('src/main/helm/values.yaml')
                         def binding = new HashMap()
-                        if(valuesYaml.exists()){
+                        if (valuesYaml.exists()) {
                             try {
                                 def engine = new groovy.text.SimpleTemplateEngine()
-                                binding.put('imageName', jib.to.image+":"+jib.to.tags.first());
+                                binding.put('imageName', jib.to.image + ":" + jib.to.tags.first());
                                 binding.put('imageTag', jib.to.tags.first());
                                 binding.put('buildEnv', buildEnv);
                                 binding.put('restPort', restPortNumber);
@@ -319,7 +319,7 @@ class RoAppPlugin implements Plugin<Project> {
                                 binding.putAll(extension.docker.helmChart.values)
                                 def template = engine.createTemplate(valuesYaml).make(binding).toString()
                                 binding.remove('out')
-                            }catch(MissingPropertyException exc){
+                            } catch (MissingPropertyException exc) {
                                 throw new GradleException("Required property '${exc.getProperty()}' missing from helmChart.values " +
                                         "array for values.yaml file.")
                             }
@@ -369,7 +369,7 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                 }
                 if (project.appConfig.identityManager) {
-                   println project.appConfig.identityManager.idmName.name()
+                    println project.appConfig.identityManager.idmName.name()
                     if (project.appConfig.identityManager.idmName.name() != "UAA" && project.appConfig.identityManager.idmName.name() != "KEYCLOAK") {
                         throw new GradleException('Unsupported identityManager ' + project.appConfig.identityManager + ". Supports only UAA or KEYCLOAK.")
                     }
@@ -482,14 +482,16 @@ class RoAppPlugin implements Plugin<Project> {
 
                     }
 
-                    if(extension.unitTest == 'y') {
+                    if (extension.unitTest == 'y') {
                         //Adding spring boot test frameworks to all applications
                         testImplementation('org.springframework.boot:spring-boot-starter-test') {
                             exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+                            //   exclude group: 'junit', module: 'junit'
                         }
+                        //Use Springboot test starter package provided Junit instead of using Junit standalone
                         //JUnit 5 libraries
-                        testImplementation(platform("org.junit:junit-bom:${RoConstants.junitTestVersion}"))
-                        testImplementation('org.junit.jupiter:junit-jupiter')
+                        //  testImplementation(platform("org.junit:junit-bom:${RoConstants.junitTestVersion}"))
+                        //  testImplementation('org.junit.jupiter:junit-jupiter')
 
                         // Mockito libraries
                         testImplementation("org.mockito:mockito-core:${RoConstants.mockitoVersion}")
@@ -511,10 +513,10 @@ class RoAppPlugin implements Plugin<Project> {
 
                     if (extension.identityManager && project.appConfig.identityManager.idmName.name() == 'UAA') {
                         //Configuring security with UAA identity manager
-                        if(extension.identityManager.uaaClient == 'y') {
+                        if (extension.identityManager.uaaClient == 'y') {
                             implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
                         }
-                        if(extension.identityManager.uaaResourceServer == 'y') {
+                        if (extension.identityManager.uaaResourceServer == 'y') {
                             implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
                             implementation 'org.springframework.security.oauth.boot:spring-security-oauth2-autoconfigure:2.2.1.RELEASE'
                             implementation 'org.springframework.security:spring-security-oauth2-jose'
@@ -537,7 +539,7 @@ class RoAppPlugin implements Plugin<Project> {
                         }
                         implementation 'org.springframework.boot:spring-boot-starter-actuator'
                         implementation 'io.micrometer:micrometer-registry-prometheus'
-                        props.setProperty("management.endpoints.web.exposure.include","prometheus,health,metrics")
+                        props.setProperty("management.endpoints.web.exposure.include", "prometheus,health,metrics")
                     }
                     if (extension.devTools == 'y') {
                         developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -697,7 +699,7 @@ class RoAppPlugin implements Plugin<Project> {
 
                 //Adding junit test platform
                 test {
-                    if(extension.unitTest == 'y') {
+                    if (extension.unitTest == 'y') {
                         useJUnitPlatform()
                     }
                 }
@@ -725,7 +727,7 @@ class RoAppPlugin implements Plugin<Project> {
 
                     //Defining custom debug task
                     def debugApp = tasks.register("debug-${project.name}") {
-                        if(project.gradle.startParameter.taskNames[0] != null && project.gradle.startParameter.taskNames[0].startsWith('debug')) {
+                        if (project.gradle.startParameter.taskNames[0] != null && project.gradle.startParameter.taskNames[0].startsWith('debug')) {
                             bootRun {
                                 jvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,address=9000,suspend=y"]
                             }
@@ -745,7 +747,7 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                     //Defining custom debug task
                     def debugApp = tasks.register("debug-${project.name}") {
-                        if(project.gradle.startParameter.taskNames[0] != null && project.gradle.startParameter.taskNames[0].startsWith('debug')) {
+                        if (project.gradle.startParameter.taskNames[0] != null && project.gradle.startParameter.taskNames[0].startsWith('debug')) {
                             run {
                                 jvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,address=9000,suspend=y"]
                             }

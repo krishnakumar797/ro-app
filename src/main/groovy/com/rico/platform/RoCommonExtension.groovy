@@ -12,6 +12,7 @@ import org.gradle.internal.reflect.Instantiator
 class RoCommonExtension {
 
 	String autoGenerateJavaClassForProtoFiles
+	String unitTest
 
 	Project project
 
