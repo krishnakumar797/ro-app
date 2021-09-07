@@ -259,7 +259,13 @@ class RoAppPlugin implements Plugin<Project> {
                             println "No DOCKER_HOST variable defined. Suspending DOCKER RUN plugin."
                         }
                     } else if (extension.docker.swarm != null) {
-                        healthCheck = "curl http://${extension.docker.swarm.serviceName}:${restPortNumber}/actuator/health"
+                        if (extension.docker.healthCheck) {
+                            if (extension.docker.healthCheck.healthCheckCmd) {
+                                healthCheck = extension.docker.healthCheck.healthCheckCmd
+                            } else {
+                                healthCheck = "curl http://${extension.docker.swarm.serviceName}:${restPortNumber}/actuator/health"
+                            }
+                        }
                         def networkName = 'ingress'
                         if (extension.docker.networkName) {
                             networkName = extension.docker.networkName

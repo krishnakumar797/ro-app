@@ -294,10 +294,10 @@ class SwarmPlugin implements Plugin<Project> {
 		//Adding health check
 		if(args.get("monitoring") == 'y') {
 			HealthCheck check = new HealthCheck();
-			check.withStartPeriod(Long.parseLong(args.get("healthCheckInitialDelayInSec")) * 1000)
-			check.withInterval(Long.parseLong(args.get("healthCheckIntervalInSec")) * 1000)
+			check.withStartPeriod(Long.parseLong(args.get("healthCheckInitialDelayInSec")) * 1000000000)
+			check.withInterval(Long.parseLong(args.get("healthCheckIntervalInSec")) * 1000000000)
 			check.withRetries(5)
-			check.withTimeout(8 * 1000)
+			check.withTimeout(8l * 1000000000)
 			def tests = []
 			tests.add(args.get("healthCheckCmd"))
 			check.withTest(tests)
