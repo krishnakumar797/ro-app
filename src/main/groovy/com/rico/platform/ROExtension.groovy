@@ -9,52 +9,22 @@ import org.gradle.internal.reflect.Instantiator
  * @author krishna
  *
  */
-class ROExtension {
+class ROExtension extends RoBaseExtension {
 	
 	String appName
-	String security
-	String dataBase
-	String persistence
-	String multitenancy
-	String keyvaluestore
-	String cache
-	String queue
-	String grpc
 	String grpcServer
 	String grpcClient
-	String rest
-	String web
-	String search
-	String logging
-	String unitTest
 	String monitoring
 	String devTools
-	String javaModule
 	String javaMainClass
 
-	static class IdentityManager {
+	Project project
+	Docker docker
 
-		enum IdmName {
-			UAA, KEYCLOAK
-		}
-
-		IdmName UAA = IdmName.UAA
-		IdmName KEYCLOAK = IdmName.KEYCLOAK
-		IdmName idmName
-		String uaaClient, uaaResourceServer
-		Project project
-
-		IdentityManager(Project project) {
-			this.project = project
-		}
-	}
-
-	IdentityManager identityManager
-
-	IdentityManager identityManager(Closure closure) {
-		identityManager = new IdentityManager(this.project)
-		this.project.configure(identityManager, closure)
-		return identityManager
+	ROExtension(Instantiator instantiator,
+	Project project) {
+		super(instantiator, project)
+		this.project = project
 	}
 
 	static class Docker {
@@ -158,14 +128,6 @@ class ROExtension {
 		String toString() {
 			return imageName + " " + containerName
 		}
-	}
-
-	Project project
-	Docker docker
-
-	ROExtension(Instantiator instantiator,
-	Project project) {
-		this.project = project
 	}
 
 	Docker docker(Closure closure) {

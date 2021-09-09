@@ -9,15 +9,15 @@ import org.gradle.internal.reflect.Instantiator
  * @author krishna
  *
  */
-class RoCommonExtension {
+class RoCommonExtension extends RoBaseExtension{
 
 	String autoGenerateJavaClassForProtoFiles
-	String unitTest
 
 	Project project
 
     RoCommonExtension(Instantiator instantiator,
                       Project project) {
+		super(instantiator, project)
 		this.project = project
 	}
 }

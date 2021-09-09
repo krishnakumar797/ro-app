@@ -1,8 +1,9 @@
 package com.rico.platform
 
-
+import org.gradle.api.DomainObjectSet
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.internal.reflect.Instantiator
 
 import javax.inject.Inject
@@ -29,7 +30,7 @@ class RoGeneralPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
 
-        this.getClass().getResource( '/projectInfo.properties' ).withInputStream {
+        this.getClass().getResource('/projectInfo.properties').withInputStream {
             props.load(it)
         }
 
@@ -51,11 +52,17 @@ class RoGeneralPlugin implements Plugin<Project> {
             project.apply plugin: 'application'
             project.apply plugin: 'com.github.rico.ro-app'
             project.apply plugin: 'org.springframework.boot'
-        }else {
+        } else {
             //Compile only libraries for common application
             project.apply plugin: 'java'
             project.apply plugin: 'java-library'
             project.apply plugin: 'com.github.rico.common'
+        }
+
+        project.beforeEvaluate {
+            if(!project.name.startsWith('common')){
+                project.evaluationDependsOn(':common')
+            }
         }
 
         project.afterEvaluate {
@@ -67,27 +74,32 @@ class RoGeneralPlugin implements Plugin<Project> {
 //            for (Map.Entry<String, Project> map : childProjects) {
 //                if (map.getKey().contentEquals(project.getName())) {
 //                    Project project1 = map.getValue()
-//                    ROExtension extension  = (ROExtension) project1.getExtensions().findByName("appConfig")
-//                    if(extension == null){
+//                    if (project.name.startsWith('common')) {
+//                        continue;
+//                    }
+//                    ROExtension extension = (ROExtension) project1.getExtensions().findByName("appConfig")
+//                    if (extension == null) {
 //                        continue;
 //                    }
 //                    for (Map.Entry<String, Object> extensionEntry : extension.properties) {
-//                        if(extensionEntry.getValue() && extensionEntry.getValue() instanceof String){
+//                        if (extensionEntry.getValue() && extensionEntry.getValue() instanceof String) {
+//                            childProjects.get('common').dependencies.add("compileOnly", 'org.springframework.data:spring-data-jpa');
 //                            configMap.put(extensionEntry.getKey(), extensionEntry.getValue());
 //                        }
 //                    }
 //                    break
 //                }
 //            }
-//            if (!project.name.startsWith('common')) {
-//                for (Map.Entry<String, Boolean> configs : configMap) {
-//                   println "KEY "+configs.getKey()
-//                }
-//            }
+
 
             project.configure(project) {
                 project.apply plugin: "io.freefair.lombok"
 
+//                if (project.name.startsWith('common')) {
+//                    for (Map.Entry<String, Boolean> configs : configMap) {
+//                        println "KEY " + configs.getKey() + " VALUE " + configs.getValue()
+//                    }
+//                }
             }
 
             project.with {

@@ -92,7 +92,6 @@ class RoAppPlugin implements Plugin<Project> {
                         languageVersion = JavaLanguageVersion.of(11)
                     }
                 }
-
                 //Applying war plugin
                 if (extension.web) {
                     project.apply plugin: 'war'
@@ -450,6 +449,12 @@ class RoAppPlugin implements Plugin<Project> {
                 if (project.appConfig.web) {
                     enabledServices += "web "
                 }
+                if (project.appConfig.modelMapper) {
+                    enabledServices += "modelMapper "
+                }
+                if (project.appConfig.beanValidation) {
+                    enabledServices += "beanValidation "
+                }
                 if (project.appConfig.identityManager) {
                     enabledServices += "uaa "
                 }
@@ -472,6 +477,7 @@ class RoAppPlugin implements Plugin<Project> {
 
                     implementation 'org.springframework.boot:spring-boot-starter'
                     implementation 'javax.annotation:javax.annotation-api'
+                    implementation 'com.fasterxml.jackson.core:jackson-databind'
                     compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 
 
@@ -550,10 +556,18 @@ class RoAppPlugin implements Plugin<Project> {
                     if (extension.devTools == 'y') {
                         developmentOnly 'org.springframework.boot:spring-boot-devtools'
                     }
-                    if (extension.rest == 'y') {
+
+                    if(extension.modelMapper == 'y'){
                         implementation "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
-                        implementation 'org.springframework.boot:spring-boot-starter-web'
+                    }
+                    if(extension.beanValidation == 'y'){
                         implementation 'org.springframework.boot:spring-boot-starter-validation'
+                        if (extension.javaModule) {
+                            moduleInfo.append("requires java.validation;\n")
+                        }
+                    }
+                    if (extension.rest == 'y') {
+                        implementation 'org.springframework.boot:spring-boot-starter-web'
                         props.setProperty('spring.mvc.throw-exception-if-no-handler-found', 'true')
                         //Checking if the security is enabled or not
                         if (!extension.security) {
@@ -565,7 +579,6 @@ class RoAppPlugin implements Plugin<Project> {
 
                         if (extension.javaModule) {
                             moduleInfo.append("requires spring.web;\n")
-                            moduleInfo.append("requires java.validation;\n")
                         }
                     }
 
@@ -574,9 +587,7 @@ class RoAppPlugin implements Plugin<Project> {
                         runtimeOnly "javax.servlet:jstl:1.2"
                         runtimeOnly "org.apache.tomcat.embed:tomcat-embed-jasper"
                         if (extension.rest != 'y') {
-                            runtimeOnly "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
                             implementation 'org.springframework.boot:spring-boot-starter-web'
-                            implementation 'org.springframework.boot:spring-boot-starter-validation'
                         }
                         //Checking if the security is enabled or not
                         if (!extension.security) {
@@ -588,7 +599,6 @@ class RoAppPlugin implements Plugin<Project> {
 
                     if (extension.search == 'y') {
                         implementation 'org.springframework.data:spring-data-elasticsearch'
-
                         if (extension.rest != 'y') {
                             runtimeOnly('org.springframework.boot:spring-boot-starter-web') {
                                 exclude module: "spring-boot-tomcat"
