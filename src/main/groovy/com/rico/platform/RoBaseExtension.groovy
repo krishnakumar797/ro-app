@@ -4,9 +4,9 @@ import org.gradle.api.Project
 import org.gradle.internal.reflect.Instantiator
 
 class RoBaseExtension {
-    String security
-    String dataBase
-    String persistence
+    List<String> security = new ArrayList<>()
+    List<String> dataBase = new ArrayList<>()
+    List<String> persistence = new ArrayList<>()
     String multitenancy
     String keyvaluestore
     String cache

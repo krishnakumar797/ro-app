@@ -1,6 +1,7 @@
 package com.rico.platform
 
 import com.rico.platform.utils.RoConstants
+import com.rico.platform.utils.RoUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPlugin
@@ -18,7 +19,6 @@ class RoCommonPlugin implements Plugin<Project> {
 
     final Instantiator instantiator;
     private boolean isModularised;
-    //  private Map<String, Boolean> configMap = new HashMap<>()
 
     @Inject
     RoCommonPlugin(Instantiator instantiator) {
@@ -36,7 +36,14 @@ class RoCommonPlugin implements Plugin<Project> {
                 gradlePluginPortal()
             }
             dependencies {
-                classpath "gradle.plugin.com.google.protobuf:protobuf-gradle-plugin:0.8.11"
+                classpath "gradle.plugin.com.google.protobuf:protobuf-gradle-plugin:0.8.17"
+                classpath "de.jjohannes.gradle:extra-java-module-info:0.9"
+            }
+
+            if (extension.unitTest == 'y') {
+                configurations {
+                    testImplementation.extendsFrom compileOnly
+                }
             }
         }
 
@@ -47,92 +54,32 @@ class RoCommonPlugin implements Plugin<Project> {
             infoFile.delete();
         }
 
-        project.afterEvaluate {
-//            //Getting Package names in the common folder
-//            def sourceSet = project.sourceSets.findByName('main').java
-//            def packages = sourceSet
-//                    .filter { it.path.endsWith('.java') }
-//                    .collect {
-//                        it.getParentFile().path
-//                                .substring(sourceSet.srcDirs[0].path.length() + 1)
-//                                .replace('/', '.')
-//                    }
-//                    .unique()
-//
-//            packages.each {
-//                if (it.contains("couchbase")) {
-//                    configMap.put("couchbase", true)
-//                }
-//                if (it.contains("kafka")) {
-//                    configMap.put("kafka", true)
-//                }
-//                if (it.contains("redis")) {
-//                    configMap.put("redis", true)
-//                }
-//                if (it.contains("grpc")) {
-//                    configMap.put("grpc", true)
-//                }
-//                if (it.contains("logging")) {
-//                    configMap.put("logging", true)
-//                }
-//                if (it.contains("security")) {
-//                    configMap.put("security", true)
-//                }
-//                if (it.contains("rest")) {
-//                    configMap.put("rest", true)
-//                }
-//                if (it.contains("elasticsearch")) {
-//                    configMap.put("elasticsearch", true)
-//                }
-//                if (it.contains("springdata")) {
-//                    configMap.put("springdata", true)
-//                }
-//                if (it.contains("hibernate")) {
-//                    configMap.put("hibernate", true)
-//                }
-//                if (it.contains("hazelcast")) {
-//                    configMap.put("hazelcast", true)
-//                }
-//                if (it.contains("hazelcast")) {
-//                    configMap.put("hazelcast", true)
-//                }
-//                if (it.contains("web")) {
-//                    configMap.put("web", true)
-//                }
-//                if (it.contains("uaa")) {
-//                    configMap.put("uaa", true)
-//                }
-//            }
 
-//            //Getting Ro app extension
-//            Map<String, Project> childProjects = project.rootProject.getChildProjects()
-//            for (Map.Entry<String, Project> map : childProjects) {
-//                if (!map.getKey().contentEquals(project.getName())) {
-//                    Project project1 = map.getValue()
-//                    ROExtension roExtension = (ROExtension) project1.getExtensions().findByName("appConfig")
-//                    if (roExtension.javaModule) {
-//                        isModularised = true
-//                        break
-//                    }
-//                    roExtension.modelMapper = 'y'
-//                    if(roExtension.modelMapper){
-//                        configMap.put("modelMapper", true)
-//                    }
-//                }
-//            }
+        project.afterEvaluate {
+
+
+            //Getting Package names in the common folder
+            def sourceSet = project.sourceSets.findByName('main').java
+            def packages = sourceSet
+                    .filter { it.path.endsWith('.java') }
+                    .collect {
+                        it.getParentFile().path
+                                .substring(sourceSet.srcDirs[0].path.length() + 1)
+                                .replace(File.separator, '.')
+                    }
+                    .unique()
 
             isModularised = extension.javaModule == 'y' ? true : false;
             println "Is modularised " + isModularised
 
 
             project.configure(project) {
-                println "Common at Configure.."
                 ext {
                     set('elasticsearch.version', '7.0.0')
                 }
+
                 //Applying generate protobuf plugin
                 if (extension.autoGenerateJavaClassForProtoFiles == 'y') {
-                    println "ROOT PROJECT PATH $projectDir"
                     project.apply plugin: 'com.google.protobuf'
                     println "To auto generate java class place the proto files under src/main/proto and run generateProto command in the common project"
                     // Place proto files under src/main/proto
@@ -140,9 +87,6 @@ class RoCommonPlugin implements Plugin<Project> {
                         main {
                             proto {
                                 srcDir 'src/main/proto'
-                            }
-                            java {
-                                srcDir 'src/main/java'
                             }
                         }
                     }
@@ -154,7 +98,7 @@ class RoCommonPlugin implements Plugin<Project> {
                         }
                         plugins {
                             grpc {
-                                artifact = "io.grpc:protoc-gen-grpc-java::${RoConstants.protocJavaVersion}"
+                                artifact = "io.grpc:protoc-gen-grpc-java:${RoConstants.grpcJavaVersion}"
                             }
                         }
 
@@ -175,25 +119,36 @@ class RoCommonPlugin implements Plugin<Project> {
                         generatedFilesBaseDir = "$projectDir/src"
                     }
                 }
-                if (extension.unitTest == 'y') {
-                    configurations {
-                        testImplementation.extendsFrom compileOnly
-                    }
-                }
 
                 if (isModularised) {
-//                    apply plugin: 'de.jjohannes.extra-java-module-info'
-//                    extraJavaModuleInfo {
-//                        if (configMap.get("grpc")) {
-//                            automaticModule("grpc-server-spring-boot-autoconfigure-2.10.1.RELEASE.jar", "grpc.server.spring.boot.autoconfigure")
-//                            automaticModule("grpc-client-spring-boot-autoconfigure-2.10.1.RELEASE.jar", "grpc.client.spring.boot.autoconfigure")
-//                        }
-//                        if (configMap.get("kafka")) {
-//                            automaticModule("kafka-clients-2.3.1.jar", "kafka.clients")
-//                        }
-//                    }
+                    apply plugin: 'de.jjohannes.extra-java-module-info'
+                    extraJavaModuleInfo {
+                        failOnMissingModuleInfo.set(false)
+                        if (extension.grpc == 'y') {
+                            automaticModule("grpc-server-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.server.spring.boot.autoconfigure")
+                            automaticModule("grpc-client-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.client.spring.boot.autoconfigure")
+                            automaticModule("io.grpc-${RoConstants.helidonGrpcVersion}.jar", "io.grpc")
+                            automaticModule("grpc-stub-${RoConstants.grpcJavaVersion}.jar", "grpc.stub")
+                            automaticModule("grpc-protobuf-${RoConstants.grpcJavaVersion}.jar", "grpc.protobuf")
+                            automaticModule("grpc-netty-shaded-${RoConstants.grpcJavaVersion}.jar", "grpc.netty.shaded")
+                            automaticModule("guava-30.0-android.jar", "com.google.common")
+                            automaticModule("reflections-0.9.11.jar", "reflections")
+                            automaticModule("commons-beanutils-1.9.4.jar", "commons.beanutils")
+                            automaticModule("servlet-api-2.5.jar", "servlet.api")
+
+                        }
+                        if(extension.modelMapper == 'y'){
+                            automaticModule("modelmapper-${RoConstants.modelMapperVersion}.jar", "modelmapper")
+                        }
+                        if (extension.queue == 'y') {
+                            automaticModule("kafka-clients-2.3.1.jar", "kafka.clients")
+                        }
+                    }
                     project.plugins.withType(JavaPlugin).configureEach {
                         java {
+                            modularity.inferModulePath = true
+                        }
+                        tasks.named('compileJava') {
                             modularity.inferModulePath = true
                         }
                     }
@@ -201,28 +156,37 @@ class RoCommonPlugin implements Plugin<Project> {
             }
 
             project.with {
-                println "Common Before dependencies.."
                 dependencies {
-                    println "Common After dependencies.."
                     def commonModuleInfo
 
                     if (isModularised) {
                         commonModuleInfo = file("src/main/java/module-info.java")
-                        commonModuleInfo.write("module com.rico.common {\n")
+                        if (extension.commonPackage) {
+                            commonModuleInfo.write("module ${extension.commonPackage}{\n")
+                            RoUtils.commonPackageName = extension.commonPackage
+                        }
+                        packages.each {
+                            commonModuleInfo.append("exports ${it};\n")
+                        }
                         commonModuleInfo.append("requires static spring.core;\n")
                         commonModuleInfo.append("requires static spring.boot;\n")
                         commonModuleInfo.append("requires static spring.boot.autoconfigure;\n")
                         commonModuleInfo.append("requires static spring.beans;\n")
                         commonModuleInfo.append("requires static java.annotation;\n")
                         commonModuleInfo.append("requires static spring.context;\n")
+                        commonModuleInfo.append("requires static commons.beanutils;\n")
+                        commonModuleInfo.append("requires static com.fasterxml.jackson.databind;\n")
+                        commonModuleInfo.append("requires static com.fasterxml.jackson.annotation;\n")
                         commonModuleInfo.append("requires static lombok;\n")
+                        commonModuleInfo.append("requires reflections;\n")
                     }
+
                     compileOnly "com.sun.activation:jakarta.activation:${RoConstants.jakartaVersion}"
                     compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
                     compileOnly "com.google.code.findbugs:jsr305:3.0.2"
                     compileOnly "com.fasterxml.jackson.core:jackson-databind"
 
-                    if (extension.dataBase == 'couchbase') {
+                    if (extension.dataBase.contains('couchbase')) {
                         compileOnly 'org.springframework.data:spring-data-couchbase'
                         if (isModularised) {
                             commonModuleInfo.append("requires static spring.data.couchbase;\n")
@@ -250,13 +214,24 @@ class RoCommonPlugin implements Plugin<Project> {
 
                     if (extension.grpc == 'y') {
                         compileOnly "net.devh:grpc-spring-boot-starter:${RoConstants.grpcVersion}"
-                        compileOnly "io.grpc:grpc-protobuf:${RoConstants.protocJavaVersion}"
-                        compileOnly "io.grpc:grpc-stub:${RoConstants.protocJavaVersion}"
-                        compileOnly "io.grpc:grpc-netty-shaded:${RoConstants.protocJavaVersion}"
+                        compileOnly "io.grpc:grpc-protobuf:${RoConstants.grpcJavaVersion}"
+                        compileOnly "io.grpc:grpc-stub:${RoConstants.grpcJavaVersion}"
+                        compileOnly "io.grpc:grpc-netty-shaded:${RoConstants.grpcJavaVersion}"
+                        if(extension.unitTest == 'y'){
+                            testImplementation("io.grpc:grpc-testing:${RoConstants.grpcJavaVersion}")
+                        }
+
+                     //  For Java module support WIP
+                     //   compileOnly "io.helidon.grpc:io.grpc:${RoConstants.helidonGrpcVersion}"
                         if (isModularised) {
                             commonModuleInfo.append("requires static grpc.client.spring.boot.autoconfigure;\n")
-                            commonModuleInfo.append("requires static grpc.api;\n")
                             commonModuleInfo.append("requires static grpc.server.spring.boot.autoconfigure;\n")
+                            commonModuleInfo.append("requires static io.grpc;\n")
+                            commonModuleInfo.append("requires static com.google.protobuf;\n")
+                            commonModuleInfo.append("requires static grpc.stub;\n")
+                            commonModuleInfo.append("requires static grpc.protobuf;\n")
+                            commonModuleInfo.append("requires static grpc.netty.shaded;\n")
+                            commonModuleInfo.append("requires static com.google.common;\n")
                         }
                     }
 
@@ -266,6 +241,8 @@ class RoCommonPlugin implements Plugin<Project> {
                         compileOnly 'org.apache.logging.log4j:log4j-core'
                         if (isModularised) {
                             commonModuleInfo.append("requires static org.apache.logging.log4j.core;\n")
+                            commonModuleInfo.append("requires static org.apache.logging.log4j;\n")
+
                         }
                     }
 
@@ -281,7 +258,7 @@ class RoCommonPlugin implements Plugin<Project> {
                             commonModuleInfo.append("requires static spring.data.elasticsearch;\n")
                         }
                     }
-                    if (extension.persistence == 'springData') {
+                    if (extension.persistence.contains('springData')) {
                         compileOnly 'org.springframework.data:spring-data-jpa'
                         compileOnly 'org.hibernate:hibernate-entitymanager'
                         if (isModularised) {
@@ -291,7 +268,7 @@ class RoCommonPlugin implements Plugin<Project> {
                             commonModuleInfo.append("requires static spring.tx;\n")
                         }
                     }
-                    if (extension.persistence == 'hibernate') {
+                    if (extension.persistence.contains('hibernate')) {
                         compileOnly 'org.hibernate:hibernate-entitymanager'
                     }
 
@@ -307,7 +284,7 @@ class RoCommonPlugin implements Plugin<Project> {
 //                        compileOnly 'org.springframework.boot:spring-boot-actuator-autoconfigure'
 //                    }
 
-                    if (extension.security == 'form' || extension.security == 'jwt') {
+                    if (extension.security.contains('form') || extension.security.contains('jwt')) {
                         compileOnly "org.springframework.security:spring-security-web"
                         compileOnly "org.springframework.security:spring-security-config"
                         compileOnly "com.auth0:java-jwt:${RoConstants.jwtVersion}"
@@ -325,6 +302,7 @@ class RoCommonPlugin implements Plugin<Project> {
                         compileOnly "javax.servlet:servlet-api:${RoConstants.servletApiVersin}"
                         if (isModularised) {
                             commonModuleInfo.append("requires static spring.webmvc;\n")
+                            commonModuleInfo.append("requires static servlet.api;\n")
                         }
                     }
 
@@ -332,7 +310,6 @@ class RoCommonPlugin implements Plugin<Project> {
                         compileOnly "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
                         if (isModularised) {
                             commonModuleInfo.append("requires static modelmapper;\n")
-
                         }
                     }
 
@@ -358,7 +335,7 @@ class RoCommonPlugin implements Plugin<Project> {
                     implementation "org.javassist:javassist:${RoConstants.javaAssistVersion}"
 
                     //Common libs
-                    if (extension.persistence == 'springData' || extension.persistence == 'hibernate') {
+                    if (extension.persistence.contains('springData') || extension.persistence.contains('hibernate')) {
                         compileOnly 'com.zaxxer:HikariCP'
                     }
                     if (extension.queue == 'y' || extension.grpc == 'y') {
@@ -388,17 +365,17 @@ class RoCommonPlugin implements Plugin<Project> {
 
                     //Common modules
                     if (isModularised) {
-                        if (extension.dataBase == 'couchbase' || extension.persistence == 'hibernate' || extension.persistence == 'springData' || extension.search == 'y') {
+                        if (extension.dataBase.contains('couchbase') || extension.persistence.contains('hibernate') || extension.persistence.contains('springData') || extension.search == 'y') {
                             commonModuleInfo.append("requires static spring.data.jpa;\n")
                             commonModuleInfo.append("requires static spring.data.commons;\n")
                         }
                         if (extension.search == 'y' || extension.rest == 'y') {
                             commonModuleInfo.append("requires static spring.web;\n")
                         }
-                        if (extension.persistence == 'hibernate' || extension.persistence == 'springData') {
+                        if (extension.persistence.contains('hibernate') || extension.persistence.contains('springData')) {
                             commonModuleInfo.append("requires static org.hibernate.orm.core;\n")
                         }
-
+                       // commonModuleInfo.append("exports ${extension.commonPackage}.config;\n")
                         commonModuleInfo.append("}")
                     }
                 }

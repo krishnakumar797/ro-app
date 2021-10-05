@@ -1,5 +1,6 @@
 package com.rico.platform
 
+import com.rico.platform.utils.RoUtils
 import org.gradle.api.plugins.JavaPlugin
 
 import javax.inject.Inject
@@ -8,7 +9,6 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.internal.reflect.Instantiator
-import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 import com.rico.platform.utils.RoConstants
@@ -59,6 +59,12 @@ class RoAppPlugin implements Plugin<Project> {
                 classpath "org.beryx:badass-jlink-plugin:2.24.1"
                 classpath "de.jjohannes.gradle:extra-java-module-info:0.9"
             }
+
+            if (extension.unitTest == 'y') {
+                configurations {
+                    testImplementation.extendsFrom implementation
+                }
+            }
         }
 
         //Deleting module info file if exist
@@ -104,8 +110,35 @@ class RoAppPlugin implements Plugin<Project> {
                         mainModule = extension.javaMainClass
                         mainClass = extension.javaMainClass
                     }
+                    apply plugin: 'de.jjohannes.extra-java-module-info'
+                    extraJavaModuleInfo {
+                        failOnMissingModuleInfo.set(false)
+
+                        if (extension.grpc == 'y') {
+                            automaticModule("grpc-server-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.server.spring.boot.autoconfigure")
+                            automaticModule("grpc-client-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.client.spring.boot.autoconfigure")
+                           // automaticModule("grpc-api-${RoConstants.protocJavaVersion}-module.jar", "io.grpc")
+                        }
+                        if(extension.grpcClient == 'y'){
+                            automaticModule("grpc-client-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.client.spring.boot.autoconfigure")
+                            //automaticModule("grpc-api-${RoConstants.protocJavaVersion}-module.jar", "io.grpc")
+                        }
+                        if(extension.grpcServer == 'y'){
+                            automaticModule("grpc-server-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.server.spring.boot.autoconfigure")
+                           // automaticModule("grpc-api-${RoConstants.protocJavaVersion}-module.jar", "io.grpc")
+                        }
+                        if(extension.modelMapper == 'y'){
+                            automaticModule("modelmapper-${RoConstants.modelMapperVersion}.jar", "modelmapper")
+                        }
+                        if (extension.queue == 'y') {
+                            automaticModule("kafka-clients-2.3.1.jar", "kafka.clients")
+                        }
+                    }
                     project.plugins.withType(JavaPlugin).configureEach {
                         java {
+                            modularity.inferModulePath = true
+                        }
+                        tasks.named('compileJava') {
                             modularity.inferModulePath = true
                         }
                     }
@@ -368,8 +401,8 @@ class RoAppPlugin implements Plugin<Project> {
                 if (!project.appConfig.javaMainClass) {
                     throw new GradleException('No Java Main class is configured for the application')
                 }
-                if (project.appConfig.security) {
-                    if (project.appConfig.security != "form" && project.appConfig.security != "jwt") {
+                if (!project.appConfig.security.isEmpty()) {
+                    if (!project.appConfig.security.contains("form") && !project.appConfig.security.contains("jwt")) {
                         throw new GradleException('Unsupported security ' + project.appConfig.security + ". Supports only form or jwt.")
                     }
                 }
@@ -378,28 +411,28 @@ class RoAppPlugin implements Plugin<Project> {
                     if (project.appConfig.identityManager.idmName.name() != "UAA" && project.appConfig.identityManager.idmName.name() != "KEYCLOAK") {
                         throw new GradleException('Unsupported identityManager ' + project.appConfig.identityManager + ". Supports only UAA or KEYCLOAK.")
                     }
-                    if (project.appConfig.security) {
+                    if (!project.appConfig.security.isEmpty()) {
                         throw new GradleException('Security is implicitly configured for identityManager ' + project.appConfig.identityManager + '. Remove security config already added.');
                     }
                 }
-                if (project.appConfig.dataBase) {
-                    if (project.appConfig.dataBase != "couchbase" && project.appConfig.dataBase != "postgres" && project.appConfig.dataBase != "mysql") {
+                if (!project.appConfig.dataBase.isEmpty()) {
+                    if (!project.appConfig.dataBase.contains("couchbase") && !project.appConfig.dataBase.contains("postgres") && !project.appConfig.dataBase.contains("mysql")) {
                         throw new GradleException('Unsupported database ' + project.appConfig.dataBase + ". Supports only couchbase, postgres and mysql.")
                     }
                 }
-                if (project.appConfig.persistence) {
-                    if (project.appConfig.dataBase == "couchbase") {
+                if (!project.appConfig.persistence.isEmpty()) {
+                    if (project.appConfig.dataBase.contains("couchbase")) {
                         throw new GradleException('Spring data persistence is implicitly configured for ' + project.appConfig.dataBase + ". Remove any persistence config already added.")
                     }
-                    if (project.appConfig.persistence != "springData" && project.appConfig.persistence != "hibernate") {
+                    if (!project.appConfig.persistence.contains("springData") && !project.appConfig.persistence.contains("hibernate")) {
                         throw new GradleException('Unsupported persistence layer ' + project.appConfig.persistence + '. Supports only springData and hibernate.')
                     }
                 }
                 if (project.appConfig.multitenancy) {
-                    if (project.appConfig.dataBase != "postgres") {
+                    if (!project.appConfig.dataBase.contains("postgres")) {
                         throw new GradleException('Multitenancy is not supported for ' + project.appConfig.dataBase + '. Supports only postgres database.')
                     }
-                    if (project.appConfig.persistence != "springData") {
+                    if (!project.appConfig.persistence.contains("springData")) {
                         throw new GradleException('Multitenancy is not supported for ' + project.appConfig.persistence + '. Supports only springData.')
                     }
                     if (!project.appConfig.rest && !project.appConfig.grpc && !project.appConfig.grpcServer) {
@@ -407,14 +440,14 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                 }
                 String enabledServices = ""
-                if (project.appConfig.dataBase) {
-                    enabledServices += project.appConfig.dataBase + " "
+                if (!project.appConfig.dataBase.isEmpty()) {
+                    enabledServices += project.appConfig.dataBase.join(", ") + " "
                 }
                 if (project.appConfig.rest) {
                     enabledServices += "rest "
                 }
-                if (project.appConfig.persistence) {
-                    enabledServices += project.appConfig.persistence + " "
+                if (!project.appConfig.persistence.isEmpty()) {
+                    enabledServices += project.appConfig.persistence.join(", ") + " "
                 }
                 if (project.appConfig.logging) {
                     enabledServices += "logging "
@@ -458,8 +491,8 @@ class RoAppPlugin implements Plugin<Project> {
                 if (project.appConfig.identityManager) {
                     enabledServices += "uaa "
                 }
-                if (project.appConfig.security) {
-                    enabledServices += project.appConfig.security + "-security "
+                if (!project.appConfig.security.isEmpty()) {
+                    enabledServices += project.appConfig.security.join(", ") + "-security "
                 }
                 println "Enabled services are : ${enabledServices}"
             }
@@ -487,10 +520,10 @@ class RoAppPlugin implements Plugin<Project> {
                         moduleInfo.append("requires spring.boot;\n")
                         moduleInfo.append("requires spring.context;\n")
                         moduleInfo.append("requires spring.beans;\n")
-                        moduleInfo.append("requires java.annotation;\n")
                         moduleInfo.append("requires spring.boot.autoconfigure;\n")
                         moduleInfo.append("requires static lombok;\n")
-                        moduleInfo.append("requires com.rico.common;\n")
+                        moduleInfo.append("requires com.fasterxml.jackson.annotation;\n")
+                        moduleInfo.append("requires ${RoUtils.commonPackageName};\n")
 
                     }
 
@@ -511,16 +544,17 @@ class RoAppPlugin implements Plugin<Project> {
                         testCompileOnly("org.mockito:mockito-junit-jupiter:${RoConstants.mockitoVersion}")
                     }
 
-                    if (extension.security == 'form' || extension.security == 'jwt') {
+                    if (extension.security.contains('form') || extension.security.contains('jwt')) {
                         if (extension.rest != 'y' && extension.web != 'y') {
                             throw new GradleException("Security cant be configured without rest or web config for the application")
                         }
-                        if (extension.persistence != 'springData' && extension.persistence != 'hibernate') {
+                        if (!extension.persistence.contains('springData') && !extension.persistence.contains('hibernate')) {
                             throw new GradleException('Security cant be configured without persistence config for the application')
                         }
                         implementation 'org.springframework.boot:spring-boot-starter-security'
                         implementation 'org.springframework.security:spring-security-test'
-                        props.setProperty("security.enabled", extension.security)
+                        def securityType = extension.security.contains('form') ? "form" : "jwt"
+                        props.setProperty("security.enabled", securityType)
                     }
 
                     if (extension.identityManager && project.appConfig.identityManager.idmName.name() == 'UAA') {
@@ -542,7 +576,7 @@ class RoAppPlugin implements Plugin<Project> {
                         props.setProperty("security.enabled", "form")
                     }
 
-                    if (extension.security == 'jwt') {
+                    if (extension.security.contains('jwt')) {
                         implementation "com.auth0:java-jwt:${RoConstants.jwtVersion}"
                     }
                     if (extension.monitoring == 'y') {
@@ -557,12 +591,15 @@ class RoAppPlugin implements Plugin<Project> {
                         developmentOnly 'org.springframework.boot:spring-boot-devtools'
                     }
 
-                    if(extension.modelMapper == 'y'){
+                    if (extension.modelMapper == 'y') {
                         implementation "org.modelmapper:modelmapper:${RoConstants.modelMapperVersion}"
+                        if (extension.javaModule == 'y') {
+                            moduleInfo.append("requires modelmapper;\n")
+                        }
                     }
-                    if(extension.beanValidation == 'y'){
+                    if (extension.beanValidation == 'y') {
                         implementation 'org.springframework.boot:spring-boot-starter-validation'
-                        if (extension.javaModule) {
+                        if (extension.javaModule == 'y') {
                             moduleInfo.append("requires java.validation;\n")
                         }
                     }
@@ -605,8 +642,8 @@ class RoAppPlugin implements Plugin<Project> {
                             }
                         }
                     }
-                    if (extension.dataBase == 'couchbase') {
-                        implementation 'org.springframework.data:spring-data-couchbase'
+                    if (extension.dataBase.contains('couchbase')) {
+                        implementation 'org.springframework.boot:spring-boot-starter-data-couchbase'
                         props.setProperty("database", 'couchbase')
                     }
                     if (extension.keyvaluestore == 'y') {
@@ -625,40 +662,56 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                     // For both grpc server and grpc client
                     if (extension.grpc == 'y') {
-                        testImplementation("io.grpc:grpc-testing:${RoConstants.grpcUnitTestVersion}")
+                        if(extension.unitTest == 'y') {
+                            testImplementation("io.grpc:grpc-testing:${RoConstants.grpcJavaVersion}")
+                        }
                         if (extension.rest != 'y') {
                             runtimeOnly 'jakarta.validation:jakarta.validation-api'
                         }
                         implementation "net.devh:grpc-spring-boot-starter:${RoConstants.grpcVersion}"
+                        if (extension.javaModule == 'y') {
+                            moduleInfo.append("requires grpc.client.spring.boot.autoconfigure;\n")
+                            moduleInfo.append("requires grpc.server.spring.boot.autoconfigure;\n")
 
+                        }
                         portNums.add(grpcPortNumber)
 
                     } else if (extension.grpcServer == 'y') {
-                        testImplementation("io.grpc:grpc-testing:${RoConstants.grpcUnitTestVersion}")
+                        if(extension.unitTest == 'y') {
+                            testImplementation("io.grpc:grpc-testing:${RoConstants.grpcJavaVersion}")
+                        }
                         // For grpc server
                         if (extension.rest != 'y') {
                             runtimeOnly 'jakarta.validation:jakarta.validation-api'
                         }
                         implementation "net.devh:grpc-server-spring-boot-starter:${RoConstants.grpcVersion}"
-                        runtimeOnly "io.grpc:grpc-stub:${RoConstants.protocJavaVersion}"
+                        runtimeOnly "io.grpc:grpc-stub:${RoConstants.grpcJavaVersion}"
+                        if (extension.javaModule == 'y') {
+                            moduleInfo.append("requires grpc.server.spring.boot.autoconfigure;\n")
 
+                        }
                         portNums.add(grpcPortNumber)
 
                     } else if (extension.grpcClient == 'y') {
-                        testImplementation("io.grpc:grpc-testing:${RoConstants.grpcUnitTestVersion}")
+                        if(extension.unitTest == 'y') {
+                            testImplementation("io.grpc:grpc-testing:${RoConstants.grpcJavaVersion}")
+                        }
                         // For grpc client
                         implementation "net.devh:grpc-client-spring-boot-starter:${RoConstants.grpcVersion}"
+                        if (extension.javaModule == 'y') {
+                            moduleInfo.append("requires grpc.client.spring.boot.autoconfigure;\n")
+                        }
                     }
 
                     if (extension.grpc == 'y' || extension.grpcClient == 'y') {
-                        implementation "io.grpc:grpc-stub:${RoConstants.protocJavaVersion}"
+                        implementation "io.grpc:grpc-stub:${RoConstants.grpcJavaVersion}"
                     }
                     if (extension.grpc == 'y' || extension.grpcServer == 'y' || extension.grpcClient == 'y') {
-                        runtimeOnly "io.grpc:grpc-protobuf:${RoConstants.protocJavaVersion}"
-                        runtimeOnly "io.grpc:grpc-netty-shaded:${RoConstants.protocJavaVersion}"
+                        runtimeOnly "io.grpc:grpc-protobuf:${RoConstants.grpcJavaVersion}"
+                        runtimeOnly "io.grpc:grpc-netty-shaded:${RoConstants.grpcJavaVersion}"
                     }
 
-                    if (extension.persistence == 'springData') {
+                    if (extension.persistence.contains('springData')) {
                         implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
                         props.setProperty("persistence", 'springData')
                         if (extension.javaModule) {
@@ -669,7 +722,7 @@ class RoAppPlugin implements Plugin<Project> {
                         }
                     }
 
-                    if (extension.persistence == 'hibernate') {
+                    if (extension.persistence.contains('hibernate')) {
                         implementation "org.springframework:spring-tx:${RoConstants.springVersion}"
                         implementation "jakarta.persistence:jakarta.persistence-api"
                         runtimeOnly 'org.springframework.data:spring-data-jpa'
@@ -681,12 +734,12 @@ class RoAppPlugin implements Plugin<Project> {
                         props.setProperty("persistence", 'hibernate')
                     }
 
-                    if (extension.dataBase == 'mysql') {
+                    if (extension.dataBase.contains('mysql')) {
                         runtimeOnly 'mysql:mysql-connector-java'
                         props.setProperty("dataBase", 'mysql')
                     }
 
-                    if (extension.dataBase == 'postgres') {
+                    if (extension.dataBase.contains('postgres')) {
                         runtimeOnly 'org.postgresql:postgresql'
                         props.setProperty("dataBase", 'postgres')
                     }

@@ -12,7 +12,7 @@ import org.gradle.internal.reflect.Instantiator
 class RoCommonExtension extends RoBaseExtension{
 
 	String autoGenerateJavaClassForProtoFiles
-
+	String commonPackage
 	Project project
 
     RoCommonExtension(Instantiator instantiator,

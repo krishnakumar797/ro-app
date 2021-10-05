@@ -1,5 +1,6 @@
 package com.rico.platform
 
+import com.rico.platform.utils.RoConstants
 import org.gradle.api.DomainObjectSet
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -40,7 +41,7 @@ class RoGeneralPlugin implements Plugin<Project> {
                 gradlePluginPortal()
             }
             dependencies {
-                classpath "io.freefair.gradle:lombok-plugin:5.1.0"
+           //     classpath "io.freefair.gradle:lombok-plugin:6.2.0"
                 classpath "com.github.rico:ro-app:${props.getProperty('ricoPluginVersion')}"
             }
         }
@@ -54,13 +55,12 @@ class RoGeneralPlugin implements Plugin<Project> {
             project.apply plugin: 'org.springframework.boot'
         } else {
             //Compile only libraries for common application
-            project.apply plugin: 'java'
             project.apply plugin: 'java-library'
             project.apply plugin: 'com.github.rico.common'
         }
 
         project.beforeEvaluate {
-            if(!project.name.startsWith('common')){
+            if (!project.name.startsWith('common')) {
                 project.evaluationDependsOn(':common')
             }
         }
@@ -93,7 +93,7 @@ class RoGeneralPlugin implements Plugin<Project> {
 
 
             project.configure(project) {
-                project.apply plugin: "io.freefair.lombok"
+ //               project.apply plugin: "io.freefair.lombok"
 
 //                if (project.name.startsWith('common')) {
 //                    for (Map.Entry<String, Boolean> configs : configMap) {
@@ -105,7 +105,11 @@ class RoGeneralPlugin implements Plugin<Project> {
             project.with {
 
                 dependencies {
+                    compileOnly "org.projectlombok:lombok:${RoConstants.lombokVersion}"
+                    annotationProcessor "org.projectlombok:lombok:${RoConstants.lombokVersion}"
 
+                    testCompileOnly "org.projectlombok:lombok:${RoConstants.lombokVersion}"
+                    testAnnotationProcessor "org.projectlombok:lombok:${RoConstants.lombokVersion}"
                 }
             }
         }
