@@ -63,6 +63,7 @@ class RoAppPlugin implements Plugin<Project> {
             if (extension.unitTest == 'y') {
                 configurations {
                     testImplementation.extendsFrom implementation
+                    testImplementation.extendsFrom runTimeOnly
                 }
             }
         }
@@ -647,7 +648,7 @@ class RoAppPlugin implements Plugin<Project> {
                         props.setProperty("database", 'couchbase')
                     }
                     if (extension.keyvaluestore == 'y') {
-                        runtimeOnly 'org.springframework.data:spring-data-redis'
+                        implementation 'org.springframework.data:spring-data-redis'
                         runtimeOnly 'io.lettuce:lettuce-core'
                     }
                     if (extension.cache == 'y') {
@@ -668,6 +669,7 @@ class RoAppPlugin implements Plugin<Project> {
                         if (extension.rest != 'y') {
                             runtimeOnly 'jakarta.validation:jakarta.validation-api'
                         }
+                        implementation "com.google.protobuf:protobuf-java-util:${RoConstants.protobufVersion}"
                         implementation "net.devh:grpc-spring-boot-starter:${RoConstants.grpcVersion}"
                         if (extension.javaModule == 'y') {
                             moduleInfo.append("requires grpc.client.spring.boot.autoconfigure;\n")
@@ -684,6 +686,7 @@ class RoAppPlugin implements Plugin<Project> {
                         if (extension.rest != 'y') {
                             runtimeOnly 'jakarta.validation:jakarta.validation-api'
                         }
+                        implementation "com.google.protobuf:protobuf-java-util:${RoConstants.protobufVersion}"
                         implementation "net.devh:grpc-server-spring-boot-starter:${RoConstants.grpcVersion}"
                         runtimeOnly "io.grpc:grpc-stub:${RoConstants.grpcJavaVersion}"
                         if (extension.javaModule == 'y') {
@@ -696,6 +699,7 @@ class RoAppPlugin implements Plugin<Project> {
                         if(extension.unitTest == 'y') {
                             testImplementation("io.grpc:grpc-testing:${RoConstants.grpcJavaVersion}")
                         }
+                        implementation "com.google.protobuf:protobuf-java-util:${RoConstants.protobufVersion}"
                         // For grpc client
                         implementation "net.devh:grpc-client-spring-boot-starter:${RoConstants.grpcVersion}"
                         if (extension.javaModule == 'y') {

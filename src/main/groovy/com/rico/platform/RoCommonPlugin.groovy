@@ -343,7 +343,7 @@ class RoCommonPlugin implements Plugin<Project> {
                     }
 
                     if (extension.autoGenerateJavaClassForProtoFiles == 'y') {
-                        implementation "com.google.protobuf:protobuf-java-util:${RoConstants.protobufVersion}"
+                        compileOnly "com.google.protobuf:protobuf-java-util:${RoConstants.protobufVersion}"
                     }
 
                     if (extension.unitTest == 'y') {
