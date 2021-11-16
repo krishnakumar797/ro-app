@@ -336,7 +336,7 @@ class RoCommonPlugin implements Plugin<Project> {
 
                     //Common libs
                     if (extension.persistence.contains('springData') || extension.persistence.contains('hibernate')) {
-                        compileOnly 'com.zaxxer:HikariCP'
+                        compileOnly 'com.zaxxer:HikariCP:5.0.0'
                     }
                     if (extension.queue == 'y' || extension.grpc == 'y') {
                         compileOnly "com.google.protobuf:protobuf-java:${RoConstants.protobufVersion}"

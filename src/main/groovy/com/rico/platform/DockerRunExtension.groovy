@@ -19,6 +19,7 @@ class DockerRunExtension {
 	private String tag
 	private String network
 	private String swarmMode
+	private String logDriver
 	private Integer replicas
 	private String monitoring
 	private Integer healthCheckIntervalInSec
@@ -31,6 +32,7 @@ class DockerRunExtension {
 	private boolean rollbackOnUpdateFailure
 	private Set<String> ports = ImmutableSet.of()
 	private Map<String,String> env = ImmutableMap.of()
+	private Map<String, String> logOpts = ImmutableMap.of()
 	private List<String> arguments = ImmutableList.of()
 	private List<String> dnsNameServers = ImmutableList.of()
 	private List<String> command = ImmutableList.of()
@@ -69,6 +71,14 @@ class DockerRunExtension {
 
 	public void setSwarmMode(String swarmMode) {
 		this.swarmMode = swarmMode;
+	}
+
+	public String getLogDriver() {
+		return logDriver
+	}
+
+	public void setLogDriver(String logDriver) {
+		this.logDriver = logDriver
 	}
 
 	public Integer getReplicas() {
@@ -177,6 +187,14 @@ class DockerRunExtension {
 
 	public Map<String, String> getEnv() {
 		return env
+	}
+
+	public Map<String, String> getLogOpts() {
+		return logOpts
+	}
+
+	public void logOpts(Map<String, String> logOpts) {
+		this.logOpts = logOpts
 	}
 
 	public void arguments(String... arguments) {

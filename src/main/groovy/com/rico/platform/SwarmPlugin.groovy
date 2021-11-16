@@ -2,6 +2,7 @@ package com.rico.platform
 
 import com.github.dockerjava.api.model.AuthConfig
 import com.github.dockerjava.api.model.ContainerDNSConfig
+import com.github.dockerjava.api.model.Driver
 import com.github.dockerjava.api.model.HealthCheck
 
 import java.util.Map.Entry
@@ -152,6 +153,13 @@ class SwarmPlugin implements Plugin<Project> {
 					}
 					if (ext.cpuSetReservation != null) {
 						args.put("cpuSetReservation", String.valueOf(ext.cpuSetReservation))
+					}
+					//Adding log driver
+					if (ext.logDriver != null) {
+						args.put("logDriver", ext.logDriver)
+					}
+					if(ext.logOpts !=null && !ext.logOpts.isEmpty()){
+						args.put("logOpts", ext.logOpts)
 					}
 
 					//Adding health check
@@ -336,6 +344,14 @@ class SwarmPlugin implements Plugin<Project> {
 		}
         taskSpec.withResources(resourceRequirements)
 
+		if(args.get("logDriver") !=null) {
+			Driver driver = new Driver()
+			driver.withName(args.get("logDriver"))
+			if(args.get("logOpts") !=null){
+				driver.withOptions(args.get("logOpts"))
+			}
+			taskSpec.logDriver = driver
+		}
 
 		//Adding restart policy
 		ServiceRestartPolicy policy = new ServiceRestartPolicy()

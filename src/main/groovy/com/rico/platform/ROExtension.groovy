@@ -41,6 +41,11 @@ class ROExtension extends RoBaseExtension {
 			String hostPath, containerPath
 		}
 
+		static class LogDriver {
+			String name
+			Map<String, String> logOpts = new HashMap<>()
+		}
+
 		static class HealthCheck {
 			String healthCheckCmd
 			Integer healthCheckIntervalInSec
@@ -75,6 +80,7 @@ class ROExtension extends RoBaseExtension {
 		HostPortMapping hostPortMapping
 		VolumeMapping volumeMapping
 		HostVolumeMapping hostVolumeMapping
+		LogDriver logDriver
 		HealthCheck healthCheck
 		Swarm swarm
 		HelmChart helmChart
@@ -104,6 +110,12 @@ class ROExtension extends RoBaseExtension {
 			def hostVolumeMapping = new HostVolumeMapping()
 			this.project.configure(hostVolumeMapping, closure)
 			this.hostVolumeMapping = hostVolumeMapping
+		}
+
+		void logDriver(Closure closure) {
+			def logDriver = new LogDriver()
+			this.project.configure(logDriver, closure)
+			this.logDriver = logDriver
 		}
 
 		void healthCheck(Closure closure) {

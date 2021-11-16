@@ -118,17 +118,17 @@ class RoAppPlugin implements Plugin<Project> {
                         if (extension.grpc == 'y') {
                             automaticModule("grpc-server-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.server.spring.boot.autoconfigure")
                             automaticModule("grpc-client-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.client.spring.boot.autoconfigure")
-                           // automaticModule("grpc-api-${RoConstants.protocJavaVersion}-module.jar", "io.grpc")
+                            // automaticModule("grpc-api-${RoConstants.protocJavaVersion}-module.jar", "io.grpc")
                         }
-                        if(extension.grpcClient == 'y'){
+                        if (extension.grpcClient == 'y') {
                             automaticModule("grpc-client-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.client.spring.boot.autoconfigure")
                             //automaticModule("grpc-api-${RoConstants.protocJavaVersion}-module.jar", "io.grpc")
                         }
-                        if(extension.grpcServer == 'y'){
+                        if (extension.grpcServer == 'y') {
                             automaticModule("grpc-server-spring-boot-autoconfigure-${RoConstants.grpcVersion}.jar", "grpc.server.spring.boot.autoconfigure")
-                           // automaticModule("grpc-api-${RoConstants.protocJavaVersion}-module.jar", "io.grpc")
+                            // automaticModule("grpc-api-${RoConstants.protocJavaVersion}-module.jar", "io.grpc")
                         }
-                        if(extension.modelMapper == 'y'){
+                        if (extension.modelMapper == 'y') {
                             automaticModule("modelmapper-${RoConstants.modelMapperVersion}.jar", "modelmapper")
                         }
                         if (extension.queue == 'y') {
@@ -273,6 +273,10 @@ class RoAppPlugin implements Plugin<Project> {
                                 if (!portMappings.isEmpty()) {
                                     ports portMappingArray
                                 }
+                                if(extension.docker.logDriver) {
+                                    logDriver extension.docker.logDriver.name
+                                    logOpts extension.docker.logDriver.logOpts
+                                }
                                 monitoring extension.monitoring
                                 network networkName
                                 volumes volumeMappings
@@ -313,6 +317,10 @@ class RoAppPlugin implements Plugin<Project> {
                                 tag tagName
                                 if (!portMappings.isEmpty()) {
                                     ports portMappingArray
+                                }
+                                if(extension.docker.logDriver) {
+                                    logDriver extension.docker.logDriver.name
+                                    logOpts extension.docker.logDriver.logOpts
                                 }
                                 monitoring extension.monitoring
                                 network networkName
@@ -663,7 +671,7 @@ class RoAppPlugin implements Plugin<Project> {
                     }
                     // For both grpc server and grpc client
                     if (extension.grpc == 'y') {
-                        if(extension.unitTest == 'y') {
+                        if (extension.unitTest == 'y') {
                             testImplementation("io.grpc:grpc-testing:${RoConstants.grpcJavaVersion}")
                         }
                         if (extension.rest != 'y') {
@@ -679,7 +687,7 @@ class RoAppPlugin implements Plugin<Project> {
                         portNums.add(grpcPortNumber)
 
                     } else if (extension.grpcServer == 'y') {
-                        if(extension.unitTest == 'y') {
+                        if (extension.unitTest == 'y') {
                             testImplementation("io.grpc:grpc-testing:${RoConstants.grpcJavaVersion}")
                         }
                         // For grpc server
@@ -696,7 +704,7 @@ class RoAppPlugin implements Plugin<Project> {
                         portNums.add(grpcPortNumber)
 
                     } else if (extension.grpcClient == 'y') {
-                        if(extension.unitTest == 'y') {
+                        if (extension.unitTest == 'y') {
                             testImplementation("io.grpc:grpc-testing:${RoConstants.grpcJavaVersion}")
                         }
                         implementation "com.google.protobuf:protobuf-java-util:${RoConstants.protobufVersion}"
@@ -717,6 +725,7 @@ class RoAppPlugin implements Plugin<Project> {
 
                     if (extension.persistence.contains('springData')) {
                         implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+                        implementation 'com.zaxxer:HikariCP:5.0.0'
                         props.setProperty("persistence", 'springData')
                         if (extension.javaModule) {
                             moduleInfo.append("requires spring.data.jpa;\n")
@@ -733,7 +742,7 @@ class RoAppPlugin implements Plugin<Project> {
                         runtimeOnly "org.springframework:spring-aspects:${RoConstants.springVersion}"
                         runtimeOnly "org.springframework:spring-orm:${RoConstants.springVersion}"
                         runtimeOnly 'org.hibernate:hibernate-core'
-                        runtimeOnly 'com.zaxxer:HikariCP'
+                        runtimeOnly 'com.zaxxer:HikariCP:5.0.0'
 
                         props.setProperty("persistence", 'hibernate')
                     }

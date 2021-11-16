@@ -1,5 +1,7 @@
 package com.rico.platform
 
+import com.github.dockerjava.api.model.LogConfig
+
 import java.util.Map.Entry
 
 import org.gradle.api.DefaultTask
@@ -138,6 +140,14 @@ class DockerRunPlugin implements Plugin<Project> {
 					}
 					if (ext.memoryReservationInMB != null) {
 						args.put("memoryReservationInMB", ext.memoryReservationInMB.toString())
+					}
+
+					//Adding log driver
+					if (ext.logDriver != null) {
+						args.put("logDriver", ext.logDriver)
+					}
+					if(ext.logOpts !=null && !ext.logOpts.isEmpty()){
+						args.put("logOpts", ext.logOpts)
 					}
 
 					//Adding health check
@@ -288,6 +298,16 @@ class DockerRunPlugin implements Plugin<Project> {
 		}
 		if(!envs.isEmpty()) {
 			containerCmd = containerCmd.withEnv(envs)
+		}
+
+		//Adding logDirver
+		if(args.get("logDriver") !=null) {
+			LogConfig lc = new LogConfig()
+			lc.setType(LogConfig.LoggingType.fromValue(args.get("logDriver")))
+			if(args.get("logOpts") !=null){
+				lc.setConfig(lc.setConfig())
+			}
+			hc.withLogConfig(lc)
 		}
 		//Adding health check
 		if(args.get("monitoring") == 'y') {
