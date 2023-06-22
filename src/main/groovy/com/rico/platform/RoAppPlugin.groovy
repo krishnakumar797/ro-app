@@ -54,8 +54,8 @@ class RoAppPlugin implements Plugin<Project> {
             }
             dependencies {
                 classpath "gradle.plugin.com.google.cloud.tools:jib-gradle-plugin:2.7.1"
-                classpath "org.unbroken-dome.gradle-plugins.helm:helm-plugin:1.6.1"
-                classpath "org.unbroken-dome.gradle-plugins.helm:helm-releases-plugin:1.6.1"
+                classpath "org.unbroken-dome.gradle-plugins.helm:helm-plugin:1.7.0"
+                classpath "org.unbroken-dome.gradle-plugins.helm:helm-releases-plugin:1.7.0"
                 classpath "org.beryx:badass-jlink-plugin:2.24.1"
                 classpath "de.jjohannes.gradle:extra-java-module-info:0.9"
             }
