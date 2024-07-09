@@ -18,6 +18,8 @@ class RoBaseExtension {
     String logging
     String unitTest
     String modelMapper
+    String serviceDiscoveryServer
+    String serviceDiscoveryClient
     String beanValidation
     String javaModule
 

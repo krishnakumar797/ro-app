@@ -476,6 +476,12 @@ class RoAppPlugin implements Plugin<Project> {
                 if (project.appConfig.search) {
                     enabledServices += "elastic-search "
                 }
+                if (project.appConfig.serviceDiscoveryServer) {
+                    enabledServices += "discovery-server "
+                }
+                if (project.appConfig.serviceDiscoveryClient) {
+                    enabledServices += "discovery-client "
+                }
                 if (project.appConfig.queue) {
                     enabledServices += "kafka "
                 }
@@ -669,6 +675,16 @@ class RoAppPlugin implements Plugin<Project> {
                         runtimeOnly "com.google.protobuf:protobuf-java:${RoConstants.protobufVersion}"
                         runtimeOnly 'de.ruedigermoeller:fst:2.56'
                     }
+
+                    if (extension.serviceDiscoveryServer == 'eureka') {
+                        implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
+                    }
+
+                    if(extension.serviceDiscoveryClient == 'eureka') {
+                        implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+                    } else if(extension.serviceDiscoveryClient == 'consul') {
+                        implementation 'org.springframework.cloud:spring-cloud-starter-consul-discovery'
+                    }
                     // For both grpc server and grpc client
                     if (extension.grpc == 'y') {
                         if (extension.unitTest == 'y') {
@@ -748,7 +764,7 @@ class RoAppPlugin implements Plugin<Project> {
                     }
 
                     if (extension.dataBase.contains('mysql')) {
-                        runtimeOnly 'mysql:mysql-connector-java'
+                        runtimeOnly 'com.mysql:mysql-connector-j'
                         props.setProperty("dataBase", 'mysql')
                     }
 

@@ -75,7 +75,7 @@ class RoCommonPlugin implements Plugin<Project> {
 
             project.configure(project) {
                 ext {
-                    set('elasticsearch.version', '7.0.0')
+                    set('elasticsearch.version', RoConstants.elasticSearch)
                 }
 
                 //Applying generate protobuf plugin
@@ -270,6 +270,16 @@ class RoCommonPlugin implements Plugin<Project> {
                     }
                     if (extension.persistence.contains('hibernate')) {
                         compileOnly 'org.hibernate:hibernate-entitymanager'
+                    }
+
+                    if (extension.serviceDiscoveryServer == 'eureka') {
+                        compileOnly 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
+                    }
+
+                    if (extension.serviceDiscoveryClient == 'eureka') {
+                        compileOnly 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+                    } else if (extension.serviceDiscoveryClient == 'consul') {
+                        compileOnly 'org.springframework.cloud:spring-cloud-starter-consul-discovery'
                     }
 
                     if (extension.cache == 'y') {
