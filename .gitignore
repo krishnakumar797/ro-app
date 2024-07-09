@@ -12,3 +12,4 @@ build
 .idea
 /gradle.properties
 /src/main/resources/projectInfo.properties
+/lib
